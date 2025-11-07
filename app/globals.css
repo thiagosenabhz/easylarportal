@@ -1,0 +1,12 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { --bg: #F7F9FA; --fg: #1A1A1A; }
+html, body { background: var(--bg); color: var(--fg); }
+a { color: inherit; text-decoration: none; }
+
+.btn { @apply rounded-xl px-4 py-2; }
+.btn-primary { @apply bg-brandGreen text-white hover:bg-emerald-600; }
+.card { @apply bg-white rounded-2xl border hover:shadow-md transition-shadow; }
+.container-xl { @apply max-w-7xl mx-auto px-4; }
