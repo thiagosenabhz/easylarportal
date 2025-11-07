@@ -11,7 +11,7 @@ export default function HomePage() {
         <div className="container-xl py-10">
           <h1 className="text-3xl font-bold">Encontre o imóvel dos seus sonhos</h1>
           <div className="mt-4 bg-white/10 p-3 rounded-2xl">
-            <SearchBar onSearch={(q)=>console.log('buscar', q)} />
+            <SearchBar />
           </div>
         </div>
       </section>
