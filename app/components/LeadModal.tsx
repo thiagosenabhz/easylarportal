@@ -13,11 +13,12 @@ export default function LeadModal({ open=false, onClose, phoneNumber='5531996090
   const [purpose, setPurpose] = useState<'moradia'|'investimento'|''>('');
   const [lgpd, setLgpd] = useState(false);
   const [obs, setObs] = useState('');
-  const pathname = usePathname();
+  const pathname = usePathname() || '';
   const params = useSearchParams();
+
   if (!open) return null;
 
-  const slug = pathname?.startsWith('/imovel/') ? pathname.split('/').pop() : undefined;
+  const slug = pathname.startsWith('/imovel/') ? pathname.split('/').pop() : undefined;
   const tipologia = params?.get('tipologia') || '';
 
   const context = useMemo(()=>{
@@ -65,7 +66,6 @@ Observações: ${obs || '-'}`;
           <button onClick={onClose} className="btn border">Cancelar</button>
           <button onClick={trySend} className={`btn btn-primary ${!valid && 'opacity-50 pointer-events-none'}`}>Enviar pelo WhatsApp</button>
         </div>
-        <p className="mt-2 text-xs text-neutral-500">Preencha nome, telefone, e-mail e aceite a LGPD para habilitar o envio.</p>
       </div>
     </div>
   );
