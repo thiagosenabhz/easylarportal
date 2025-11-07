@@ -9,7 +9,7 @@ export default function Header(){
   return (
     <header className="bg-brandBlue text-white sticky top-0 z-40">
       <div className="container-xl py-3 flex items-center gap-4">
-        <a href="/" className="font-bold text-xl">EasyLar</a>
+        <a href="/" className="font-bold text-xl">{t('brand')}</a>
         <nav className="hidden md:flex gap-4 opacity-90">
           <a href="/">{t('search')}</a>
           <a href="/#pre-abertura">{t('preOpening')}</a>
