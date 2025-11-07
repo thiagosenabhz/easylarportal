@@ -20,7 +20,7 @@ export default function FloatingWhatsApp() {
       >
         {/* Coloque /public/whatsapp.svg para usar a marca oficial */}
         <img
-          src="/whatsapp.svg"
+          src="/whatsapp.png"
           alt=""
           className="h-7 w-7"
           onError={(e: any) => {
