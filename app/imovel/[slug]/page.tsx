@@ -1,10 +1,8 @@
 'use client';
 import projects from '@/app/_data/projects';
-import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import VisitModal from '@/app/components/VisitModal';
-import SearchBar from '@/app/components/SearchBar';
 
 export default function ImovelPage({ params }: { params: { slug: string } }) {
   const project = projects.find(p => p.slug === params.slug);
@@ -16,28 +14,34 @@ export default function ImovelPage({ params }: { params: { slug: string } }) {
 
   if (!project) return <div className="container-xl py-10">Empreendimento não encontrado.</div>;
 
+  const compareAllowed = Boolean((project as any).compareEnabled && (project as any).obraPhoto);
+
   return (
     <div className="container-xl py-4 space-y-6">
       <div className="sticky top-[64px] z-30 bg-[var(--bg)] py-3">
         <button onClick={()=>router.back()} className="btn border mr-2">← Voltar</button>
-        <span className="align-middle text-neutral-500">Filtrar:</span>
-        <span className="ml-2 inline-block"><SearchBar /></span>
       </div>
 
       <div className="grid md:grid-cols-2 gap-6 relative">
         <div className="relative">
           {!showCompare && (
-            <img src={project.thumb || 'https://placehold.co/800x450?text=EasyLar'} alt={project.name} className="w-full rounded-2xl border" />
+            <img src={project.thumb || 'https://placehold.co/1200x675?text=Fachada'} alt={project.name} className="w-full rounded-2xl border" />
           )}
-          {showCompare && (
+          {showCompare && compareAllowed && (
             <div className="relative w-full rounded-2xl overflow-hidden border">
-              <img src={'https://placehold.co/1200x675?text=Fachada+Apresentacao'} className="w-full block" />
+              <img src={(project as any).presentationPhoto || 'https://placehold.co/1200x675?text=Fachada+Apresentacao'} className="w-full block" />
               <div className="absolute inset-0" style={{clipPath:'polygon(0% 0%, 100% 0%, 0% 100%)', overflow:'hidden'}}>
-                <img src={'https://placehold.co/1200x675?text=Foto+da+Obra+(atual)'} className="w-full block" />
+                <img src={(project as any).obraPhoto} className="w-full block" />
               </div>
             </div>
           )}
-          <button onClick={()=>setShowCompare(!showCompare)} className="absolute top-3 right-3 btn bg-white">Comparar fachada/obra</button>
+
+          <div className="absolute left-3 top-3 flex flex-col gap-2">
+            <a href="#lazer" className="btn bg-white/90">Área de lazer</a>
+            <a href="#plantas" className="btn bg-white/90">Plantas</a>
+            <a href="#implantacao" className="btn bg-white/90">Implantação</a>
+            {compareAllowed && <button onClick={()=>setShowCompare(!showCompare)} className="btn bg-white/90">Comparar fachada/obra</button>}
+          </div>
         </div>
 
         <div>
@@ -54,7 +58,7 @@ export default function ImovelPage({ params }: { params: { slug: string } }) {
 
           <div className="mt-6 space-x-2">
             {project.bedrooms?.map(b => (
-              <Link key={b} href={`/imovel/${project.slug}?tipologia=${b}`} className={`btn border inline-block ${selected==String(b)?'bg-brandBlue text-white':''}`}>Unidade {b} quartos</Link>
+              <button key={b} className={`btn border inline-block ${selected==String(b)?'bg-brandBlue text-white':''}`}>Unidade {b} quartos</button>
             ))}
           </div>
 
@@ -62,12 +66,6 @@ export default function ImovelPage({ params }: { params: { slug: string } }) {
             <button onClick={()=>setOpenVisit(true)} className="btn btn-primary">Agendar visita</button>
           </div>
         </div>
-
-        <aside className="md:absolute md:right-0 md:top-0 md:translate-x-full md:w-56 space-y-2">
-          <div className="card p-3"><a href="#lazer">Área de lazer</a></div>
-          <div className="card p-3"><a href="#plantas">Plantas</a></div>
-          <div className="card p-3"><a href="#implantacao">Implantação</a></div>
-        </aside>
       </div>
 
       <VisitModal open={openVisit} onClose={()=>setOpenVisit(false)} />
