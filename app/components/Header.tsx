@@ -1,33 +1,22 @@
 'use client';
-import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
-
-const AdminLogin = dynamic(() => import('@/app/components/admin/AdminLogin'), { ssr: false });
-
-export default function Header() {
-  const [lang, setLang] = useState<'pt'|'en'>('pt');
-  const [openAdmin, setOpenAdmin] = useState(false);
-
-  useEffect(() => {
-    const stored = typeof window !== 'undefined' ? localStorage.getItem('lang') as 'pt'|'en' | null : null;
-    if (stored) setLang(stored);
-  }, []);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') localStorage.setItem('lang', lang);
-  }, [lang]);
-
+import React from 'react';
+import { useLang } from '@/app/components/lang/LanguageProvider';
+const AdminLogin = dynamic(()=>import('@/app/components/admin/AdminLogin'),{ssr:false});
+export default function Header(){
+  const {lang,setLang,t}=useLang();
+  const [openAdmin,setOpenAdmin]=React.useState(false);
   return (
-    <header className="bg-brandBlue text-white">
+    <header className="bg-brandBlue text-white sticky top-0 z-40">
       <div className="container-xl py-3 flex items-center gap-4">
-        <div className="font-bold text-xl">EasyLar</div>
+        <a href="/" className="font-bold text-xl">EasyLar</a>
         <nav className="hidden md:flex gap-4 opacity-90">
-          <a href="/">Encontre</a>
-          <a href="/#pre-abertura">Pré-abertura</a>
-          <a href="/#oportunidades">Oportunidades</a>
+          <a href="/">{t('search')}</a>
+          <a href="/#pre-abertura">{t('preOpening')}</a>
+          <a href="/#oportunidades">{t('opportunities')}</a>
         </nav>
         <div className="ml-auto flex items-center gap-2">
-          <button onClick={()=>setOpenAdmin(true)} className="btn bg-white/10 hover:bg-white/20">Acesso do administrador</button>
+          <button onClick={()=>setOpenAdmin(true)} className="btn bg-white/10 hover:bg-white/20">{t('adminAccess')}</button>
           <button onClick={()=>setLang(lang==='pt'?'en':'pt')} className="btn bg-white text-brandBlue">{lang.toUpperCase()}</button>
         </div>
       </div>
