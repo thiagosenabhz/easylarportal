@@ -1,28 +1,36 @@
 'use client';
-import { useState } from 'react';
-import { useLang } from '@/app/components/lang/LanguageProvider';
-const bedroomsOpts = ['Studio','1 quarto','2 quartos','3 quartos'];
+import React from 'react';
+
+const chips = {
+  cidades: ['Belo Horizonte', 'Contagem'],
+  quartos: ['Studio', '1 quarto', '2 quartos', '3 quartos'],
+  vagas: ['1 vaga', '2 vagas', 'Vaga avulsa'],
+  extras: ['Varanda', 'Área privativa']
+};
+
 export default function SearchBar(){
-  const {t}=useLang();
-  const [q,setQ]=useState('');
-  const [open,setOpen]=useState(false);
-  function handleSearch(){ console.log('buscar',{q}); }
+  const [sel, setSel] = React.useState<Record<string, Set<string>>>({
+    cidades: new Set(), quartos: new Set(), vagas: new Set(), extras: new Set()
+  });
+  function toggle(group:string, value:string){
+    const next = new Set(sel[group]); next.has(value) ? next.delete(value) : next.add(value);
+    setSel({ ...sel, [group]: next });
+  }
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex gap-2">
-        <input value={q} onChange={(e)=>setQ(e.target.value)} placeholder={t('searchPlaceholder')} className="flex-1 rounded-xl border bg-white text-neutral-800 px-4 py-2 outline-none focus:ring-2 focus:ring-brandGreen"/>
-        <button onClick={handleSearch} className="btn btn-primary">{t('search')}</button>
-      </div>
-      <div className="flex items-center gap-2 text-sm">
-        <button onClick={()=>setOpen(!open)} className="px-3 py-1 rounded-full border bg-white">Filtros rápidos</button>
-        {open && (
-          <div className="flex flex-wrap gap-2">
-            {bedroomsOpts.map(o=>(<button key={o} className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border">{o}</button>))}
-            <span className="px-3 py-1 rounded-full bg-blue-50 text-brandBlue border">Varanda</span>
-            <span className="px-3 py-1 rounded-full bg-blue-50 text-brandBlue border">Área privativa</span>
-            <span className="px-3 py-1 rounded-full bg-blue-50 text-brandBlue border">Sem vaga demarcada</span>
-          </div>
-        )}
+      <div className="flex flex-wrap gap-2">
+        {chips.cidades.map(v => (
+          <button key={v} onClick={()=>toggle('cidades', v)} className={`chip ${sel.cidades.has(v)?'chip-on':''}`}>{v}</button>
+        ))}
+        {chips.quartos.map(v => (
+          <button key={v} onClick={()=>toggle('quartos', v)} className={`chip ${sel.quartos.has(v)?'chip-on':''}`}>{v}</button>
+        ))}
+        {chips.vagas.map(v => (
+          <button key={v} onClick={()=>toggle('vagas', v)} className={`chip ${sel.vagas.has(v)?'chip-on':''}`}>{v}</button>
+        ))}
+        {chips.extras.map(v => (
+          <button key={v} onClick={()=>toggle('extras', v)} className={`chip ${sel.extras.has(v)?'chip-on':''}`}>{v}</button>
+        ))}
       </div>
     </div>
   );
