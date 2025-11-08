@@ -1,24 +1,16 @@
-
-// app/types.ts
+export type VagaTipo = '1 vaga' | '2 vagas' | 'vaga avulsa' | 'sem vaga demarcada';
 
 export type Project = {
   id: string;
   slug: string;
   name: string;
-
-  // Localização
-  city?: string;
+  city: string;
   state?: string;
   neighborhood?: string;
-
-  // Segmentações
   bedroomsLabel?: string;
   parkingLabel?: string;
   features?: string[];
-
-  // Preço
   priceFrom?: string;
-
-  // Imagem de capa opcional
+  /** Thumbnail (URL or /public path). Optional. */
   thumb?: string;
 };
