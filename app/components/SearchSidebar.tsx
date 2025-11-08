@@ -1,229 +1,205 @@
-'use client';
+// app/components/SearchSidebar.tsx
+'use client'
 
-import { useMemo, useState } from 'react';
-import projects from '@/app/_data/projects';
+import * as React from 'react'
+import { projects, type Project, type VagaTipo } from '@/app/_data/projects'
 
-type Opt = { id: string; label: string };
-
-const cidades: Opt[] = [
-  { id: 'bh', label: 'Belo Horizonte' },
-  { id: 'contagem', label: 'Contagem' },
-];
-
-const tipologias: Opt[] = [
-  { id: 'studio', label: 'Studio' },
-  { id: '1q', label: '1 quarto' },
-  { id: '2q', label: '2 quartos' },
-  { id: '3q', label: '3 quartos' },
-];
-
-const vagas: Opt[] = [
-  { id: '1', label: '1 vaga' },
-  { id: '2', label: '2 vagas' },
-];
-
-const especiais: Opt[] = [
-  { id: 'privativa', label: 'Área privativa' },
-  { id: 'cobertura', label: 'Cobertura' },
-];
-
-export default function SearchSidebar() {
-  const [cidade, setCidade] = useState<string | null>(null);
-  const [bairro, setBairro] = useState<string | null>(null);
-  const [tipo, setTipo] = useState<string | null>(null);
-  const [vaga, setVaga] = useState<string | null>(null);
-  const [avulsa, setAvulsa] = useState<boolean | null>(null);
-  const [flag, setFlag] = useState<string | null>(null); // privativa/cobertura
-
-  // Bairros disponíveis de acordo com a cidade
-  const bairros: Opt[] = useMemo(() => {
-    if (!cidade)
-      return Array.from(
-        new Set(projects.map((p) => p.bairro.toLowerCase()))
-      ).map((b) => ({ id: b, label: capitalize(b) }));
-    return Array.from(
-      new Set(
-        projects.filter((p) => p.cidade === cidade).map((p) => p.bairro.toLowerCase())
-      )
-    ).map((b) => ({ id: b, label: capitalize(b) }));
-  }, [cidade]);
-
-  // Regras de disponibilidade (travas inteligentes)
-  const availability = useMemo(() => {
-    const filtered = projects.filter((p) => {
-      if (cidade && p.cidade !== cidade) return false;
-      if (bairro && p.bairro.toLowerCase() !== bairro) return false;
-      return true;
-    });
-
-    // quais tipologias existem sob esses filtros
-    const tiposOK = new Set<string>();
-    const vagasOK = new Set<string>();
-    let temAvulsa = false;
-    const flagsOK = new Set<string>(); // privativa/cobertura
-
-    filtered.forEach((p) => {
-      p.unidades.forEach((u) => {
-        tiposOK.add(u.tipo); // 'studio'|'1q'|'2q'|'3q'
-        vagasOK.add(String(u.vagas ?? 0));
-        if (u.vagaAvulsa) temAvulsa = true;
-        if (u.areaPrivativa) flagsOK.add('privativa');
-        if (u.cobertura) flagsOK.add('cobertura');
-      });
-    });
-
-    return { tiposOK, vagasOK, temAvulsa, flagsOK };
-  }, [cidade, bairro]);
-
-  const disabledTipo = (id: string) => !availability.tiposOK.has(id);
-  const disabledVaga = (id: string) => !availability.vagasOK.has(id);
-  const disabledFlag = (id: string) => !availability.flagsOK.has(id);
-
-  const onApply = () => {
-    // redireciona com query params (simples)
-    const qp = new URLSearchParams();
-    if (cidade) qp.set('cidade', cidade);
-    if (bairro) qp.set('bairro', bairro || '');
-    if (tipo) qp.set('tipo', tipo);
-    if (vaga) qp.set('vagas', vaga);
-    if (avulsa) qp.set('avulsa', '1');
-    if (flag) qp.set('flag', flag);
-    const url = `/?${qp.toString()}`;
-    window.location.assign(url);
-  };
-
-  return (
-    <aside className="w-full max-w-xs shrink-0 rounded-2xl bg-white/70 p-4 backdrop-blur-md [box-shadow:0_6px_20px_rgba(0,0,0,.08)]">
-      <h3 className="mb-3 text-lg font-semibold">Filtrar</h3>
-
-      {/* Cidade */}
-      <Section title="Cidade">
-        <ChipGroup
-          options={cidades}
-          value={cidade}
-          onChange={setCidade}
-          allowUnset
-        />
-      </Section>
-
-      {/* Bairro */}
-      <Section title="Bairro">
-        <ChipGroup
-          options={bairros}
-          value={bairro}
-          onChange={setBairro}
-          allowUnset
-        />
-      </Section>
-
-      {/* Tipologia */}
-      <Section title="Tipologia">
-        <ChipGroup
-          options={tipologias}
-          value={tipo}
-          onChange={(v) => setTipo(v)}
-          isDisabled={disabledTipo}
-          allowUnset
-        />
-      </Section>
-
-      {/* Vagas */}
-      <Section title="Vagas">
-        <ChipGroup
-          options={vagas}
-          value={vaga}
-          onChange={setVaga}
-          isDisabled={(id) => disabledVaga(id)}
-          allowUnset
-        />
-        <label className="mt-2 inline-flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={!!avulsa}
-            onChange={(e) => setAvulsa(e.target.checked)}
-            disabled={!availability.temAvulsa}
-          />
-          <span>Vaga avulsa</span>
-        </label>
-      </Section>
-
-      {/* Especiais */}
-      <Section title="Diferenciais">
-        <ChipGroup
-          options={especiais}
-          value={flag}
-          onChange={setFlag}
-          isDisabled={disabledFlag}
-          allowUnset
-        />
-      </Section>
-
-      <button
-        onClick={onApply}
-        className="mt-3 h-11 w-full rounded-xl bg-blue-600 font-medium text-white hover:bg-blue-700"
-      >
-        Aplicar filtros
-      </button>
-    </aside>
-  );
-}
-
-function Section({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="mb-4">
-      <div className="mb-2 text-sm font-medium text-gray-700">{title}</div>
-      {children}
-    </div>
-  );
-}
-
-function ChipGroup({
-  options,
-  value,
-  onChange,
-  isDisabled,
-  allowUnset,
-}: {
-  options: { id: string; label: string }[];
-  value: string | null;
-  onChange: (val: string | null) => void;
-  isDisabled?: (id: string) => boolean;
-  allowUnset?: boolean;
-}) {
-  return (
-    <div className="flex flex-wrap gap-2">
-      {options.map((o) => {
-        const active = value === o.id;
-        const disabled = isDisabled?.(o.id) ?? false;
-        return (
-          <button
-            key={o.id}
-            type="button"
-            disabled={disabled}
-            onClick={() => onChange(active && allowUnset ? null : o.id)}
-            className={[
-              'rounded-full px-3 py-1 text-sm',
-              disabled
-                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                : active
-                ? 'bg-blue-600 text-white'
-                : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50',
-            ].join(' ')}
-          >
-            {o.label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
+type Option = { id: string; label: string }
 
 function capitalize(s: string) {
-  return s.replace(/\b\w/g, (m) => m.toUpperCase());
+  return s.length ? s[0].toUpperCase() + s.slice(1) : s
+}
+
+function uniq<T>(arr: T[]) {
+  return Array.from(new Set(arr))
+}
+
+function notEmpty<T>(v: T | null | undefined): v is T {
+  return v !== null && v !== undefined && v !== ''
+}
+
+export default function SearchSidebar() {
+  // estados selecionados
+  const [cidade, setCidade] = React.useState<string | null>(null)
+  const [bairro, setBairro] = React.useState<string | null>(null)
+  const [quartos, setQuartos] = React.useState<number | null>(null)
+  const [vagas, setVagas] = React.useState<VagaTipo | null>(null)
+  const [privativa, setPrivativa] = React.useState<boolean | null>(null)
+  const [cobertura, setCobertura] = React.useState<'duplex' | 'linear' | null>(null)
+
+  // lista base, já filtrada pela cidade (quando houver)
+  const base: Project[] = React.useMemo(() => {
+    if (!cidade) return projects
+    return projects.filter(p => p.cidade === cidade)
+  }, [cidade])
+
+  // Opções de cidade (fixas a partir dos dados)
+  const cidades: Option[] = React.useMemo(() => {
+    return uniq(projects.map(p => p.cidade))
+      .filter(notEmpty)
+      .map(c => ({ id: c, label: c }))
+  }, [])
+
+  // Opções de bairro (dependem da cidade)
+  const bairros: Option[] = React.useMemo(() => {
+    const origem = base.map(p =>
+      (p.bairro ?? (p as any)?.endereco?.bairro ?? '').toString().trim().toLowerCase()
+    ).filter(Boolean)
+
+    return uniq(origem).map(b => ({ id: b, label: capitalize(b) }))
+  }, [base])
+
+  // Opções de quartos (dependem da cidade/bairro)
+  const quartosOpts: Option[] = React.useMemo(() => {
+    const origem = base
+      .filter(p => (bairro ? (p.bairro ?? '').toLowerCase() === bairro : true))
+      .flatMap(p => p.features.quartos)
+    return uniq(origem).sort((a, b) => a - b).map(q => ({ id: String(q), label: `${q} quarto${q > 1 ? 's' : ''}` }))
+  }, [base, bairro])
+
+  // Opções de vagas (dependem da cidade/bairro/quartos)
+  const vagasOpts: Option[] = React.useMemo(() => {
+    const origem = base
+      .filter(p => (bairro ? (p.bairro ?? '').toLowerCase() === bairro : true))
+      .filter(p => (quartos ? p.features.quartos.includes(quartos) : true))
+      .flatMap(p => p.features.vagas)
+
+    // regra de “auto-selecionar vaga avulsa” caso 2 vagas não existam:
+    // (essa parte fica na lógica de busca final, aqui só populamos opções válidas)
+    return uniq(origem).map(v => ({ id: v, label: capitalize(v) }))
+  }, [base, bairro, quartos])
+
+  // Opções de “área privativa” (sim/não)
+  const privativaOpts: Option[] = React.useMemo(() => {
+    const origem = base
+      .filter(p => (bairro ? (p.bairro ?? '').toLowerCase() === bairro : true))
+      .map(p => p.features.areaPrivativa ? 'Sim' : 'Não')
+    return uniq(origem).map(v => ({ id: v, label: v }))
+  }, [base, bairro])
+
+  // Opções de cobertura
+  const coberturaOpts: Option[] = React.useMemo(() => {
+    const origem = base
+      .filter(p => (bairro ? (p.bairro ?? '').toLowerCase() === bairro : true))
+      .map(p => p.features.cobertura)
+      .filter(notEmpty)
+    return uniq(origem).map(v => ({ id: v, label: `Cobertura ${v}` }))
+  }, [base, bairro])
+
+  // Busca final (apenas prepara dados; plugaremos na listagem)
+  const resultados = React.useMemo(() => {
+    let lista = [...projects]
+
+    if (cidade) lista = lista.filter(p => p.cidade === cidade)
+    if (bairro) lista = lista.filter(p => (p.bairro ?? '').toLowerCase() === bairro)
+
+    if (quartos) lista = lista.filter(p => p.features.quartos.includes(quartos))
+
+    if (vagas) {
+      // Se usuário escolheu '2 vagas' e nenhum projeto tem, mas existe 'vaga avulsa',
+      // poderíamos marcar automaticamente. Por enquanto, só filtramos pelas vagas.
+      lista = lista.filter(p => p.features.vagas.includes(vagas))
+    }
+
+    if (privativa !== null) {
+      lista = lista.filter(p => Boolean(p.features.areaPrivativa) === Boolean(privativa))
+    }
+
+    if (cobertura) {
+      lista = lista.filter(p => p.features.cobertura === cobertura)
+    }
+
+    return lista
+  }, [cidade, bairro, quartos, vagas, privativa, cobertura])
+
+  // UI muito simples (você pode estilizar como preferir)
+  return (
+    <aside className="w-full max-w-xs space-y-4">
+      <Select
+        label="Cidade"
+        value={cidade}
+        onChange={setCidade}
+        options={cidades}
+        placeholder="Selecione a cidade"
+      />
+
+      <Select
+        label="Bairro"
+        value={bairro}
+        onChange={(v) => setBairro(v?.toLowerCase() ?? null)}
+        options={bairros}
+        placeholder="Selecione o bairro"
+        disabled={!cidade}
+      />
+
+      <Select
+        label="Quartos"
+        value={quartos ? String(quartos) : null}
+        onChange={(v) => setQuartos(v ? Number(v) : null)}
+        options={quartosOpts}
+        placeholder="Selecione quartos"
+        disabled={!cidade}
+      />
+
+      <Select
+        label="Vagas"
+        value={vagas}
+        onChange={(v) => setVagas((v as VagaTipo) ?? null)}
+        options={vagasOpts}
+        placeholder="Selecione vagas"
+        disabled={!cidade}
+      />
+
+      <Select
+        label="Área privativa"
+        value={privativa === null ? null : privativa ? 'Sim' : 'Não'}
+        onChange={(v) => setPrivativa(v === null ? null : v === 'Sim')}
+        options={privativaOpts}
+        placeholder="Possui área privativa?"
+        disabled={!cidade}
+      />
+
+      <Select
+        label="Cobertura"
+        value={cobertura}
+        onChange={(v) => setCobertura((v as 'duplex' | 'linear') ?? null)}
+        options={coberturaOpts}
+        placeholder="Tipo de cobertura"
+        disabled={!cidade}
+      />
+
+      {/* Aqui você pode colocar um botão "Aplicar filtros" e/ou exibir contagem */}
+      <div className="text-sm text-slate-600">
+        {resultados.length} resultado(s) com os filtros atuais.
+      </div>
+    </aside>
+  )
+}
+
+/** Componente de Select genérico */
+function Select(props: {
+  label: string
+  value: string | null
+  onChange: (v: string | null) => void
+  options: Option[]
+  placeholder?: string
+  disabled?: boolean
+}) {
+  const { label, value, onChange, options, placeholder, disabled } = props
+  return (
+    <label className="block">
+      <span className="mb-1 block text-sm font-medium text-slate-700">{label}</span>
+      <select
+        className="w-full rounded-md border border-slate-300 px-3 py-2 bg-white disabled:bg-slate-100"
+        value={value ?? ''}
+        onChange={(e) => onChange(e.target.value || null)}
+        disabled={disabled}
+      >
+        <option value="">{placeholder ?? 'Selecione'}</option>
+        {options.map(o => (
+          <option key={o.id} value={o.id}>{o.label}</option>
+        ))}
+      </select>
+    </label>
+  )
 }
