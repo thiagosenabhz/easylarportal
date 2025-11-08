@@ -1,72 +1,168 @@
 'use client';
-import { useState, useMemo } from 'react';
-import { usePathname, useSearchParams } from 'next/navigation';
-import { useLang } from '@/app/components/lang/LanguageProvider';
 
-type Props = { open?: boolean; onClose?: () => void; phoneNumber?: string; };
+import { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 
-export default function LeadModal({ open=false, onClose, phoneNumber='5531996090508' }: Props) {
-  const { t } = useLang();
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
-  const [purpose, setPurpose] = useState<'moradia'|'investimento'|''>('');
-  const [lgpd, setLgpd] = useState(false);
-  const [obs, setObs] = useState('');
-  const pathname = usePathname() || '';
-  const params = useSearchParams();
+type Props = {
+  open: boolean;
+  onClose: () => void;
+};
+
+export default function LeadModal({ open, onClose }: Props) {
+  const ref = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  useEffect(() => {
+    // focus management
+    ref.current?.querySelector<HTMLInputElement>('input[name="name"]')?.focus();
+  }, []);
+
+  // preenchimento automático simples via localStorage
+  useEffect(() => {
+    const name = localStorage.getItem('lead:name') ?? '';
+    const phone = localStorage.getItem('lead:phone') ?? '';
+    const email = localStorage.getItem('lead:email') ?? '';
+    const nameEl = document.querySelector<HTMLInputElement>('input[name="name"]');
+    const phoneEl = document.querySelector<HTMLInputElement>('input[name="phone"]');
+    const emailEl = document.querySelector<HTMLInputElement>('input[name="email"]');
+    if (nameEl) nameEl.value = name;
+    if (phoneEl) phoneEl.value = phone;
+    if (emailEl) emailEl.value = email;
+  }, []);
 
   if (!open) return null;
 
-  const slug = pathname.startsWith('/imovel/') ? pathname.split('/').pop() : undefined;
-  const tipologia = params?.get('tipologia') || '';
-
-  const context = useMemo(()=>{
-    if (slug && tipologia) return `Estou no portal EasyLar e tenho interesse em apartamento de ${tipologia} quartos no empreendimento ${slug}.`;
-    if (slug) return `Estou no portal EasyLar e tenho interesse no empreendimento ${slug}.`;
-    return 'Estou no portal EasyLar.';
-  }, [slug, tipologia]);
-
-  const message =
-`${context} Gostaria de agendar uma visita para conhecer mais a respeito.
-Finalidade: ${purpose || '(informar)'}
-Nome: ${name}
-Telefone: ${phone}
-Email: ${email}
-Observações: ${obs || '-'}`;
-
-  const valid = name.trim() && phone.trim() && email.trim() && lgpd;
-  const waHref = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
-
-  function trySend(){ if(!valid) return; window.open(waHref,'_blank'); }
-  function onKey(e: React.KeyboardEvent){ if(e.key==='Escape') onClose?.(); }
-
-  return (
-    <div className="fixed inset-0 z-[100] bg-black/40 flex items-center justify-center p-4" onKeyDown={onKey}>
-      <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl p-5">
-        <div className="flex items-center justify-between gap-4">
-          <h3 className="text-lg font-semibold">{t('talkToConsultant')}</h3>
-          <button onClick={onClose} aria-label="Fechar" className="text-neutral-500 hover:text-black">✕</button>
+  return createPortal(
+    <div
+      aria-modal
+      role="dialog"
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4"
+      onClick={onClose}
+    >
+      <div
+        ref={ref}
+        className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold">Falar com consultor</h2>
+          <button
+            onClick={onClose}
+            aria-label="Fechar"
+            className="rounded-md p-2 hover:bg-gray-100"
+          >
+            ×
+          </button>
         </div>
-        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
-          <input value={name} onChange={e=>setName(e.target.value)} className="border rounded-lg px-3 py-2" placeholder="Seu nome*" />
-          <input value={phone} onChange={e=>setPhone(e.target.value)} className="border rounded-lg px-3 py-2" placeholder="Telefone (DDD)*" />
-          <input value={email} onChange={e=>setEmail(e.target.value)} className="border rounded-lg px-3 py-2 md:col-span-2" placeholder="Email*" type="email" />
-          <div className="md:col-span-2 flex gap-4 items-center text-sm">
-            <label className="flex items-center gap-2"><input type="radio" name="purpose" checked={purpose==='moradia'} onChange={()=>setPurpose('moradia')} /> Moradia</label>
-            <label className="flex items-center gap-2"><input type="radio" name="purpose" checked={purpose==='investimento'} onChange={()=>setPurpose('investimento')} /> Investimento</label>
+
+        <form
+          className="mt-5 space-y-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+
+            const form = e.currentTarget as HTMLFormElement;
+            const fd = new FormData(form);
+            const name = String(fd.get('name') || '');
+            const phone = String(fd.get('phone') || '');
+            const email = String(fd.get('email') || '');
+            const tipo = String(fd.get('tipo') || 'Moradia');
+            const obs = String(fd.get('obs') || '');
+            const consent = fd.get('lgpd') === 'on';
+
+            if (!name || !phone || !consent) return;
+
+            // persistência local para auto completar da próxima vez
+            localStorage.setItem('lead:name', name);
+            localStorage.setItem('lead:phone', phone);
+            localStorage.setItem('lead:email', email);
+
+            // mensagem contextual
+            const context = document?.title || 'EasyLar';
+            const msg =
+              `Olá, estou no portal EasyLar (${context}) e gostaria de falar com um consultor.\n` +
+              `Nome: ${name}\n` +
+              `Telefone: ${phone}\n` +
+              (email ? `Email: ${email}\n` : '') +
+              `Finalidade: ${tipo}\n` +
+              (obs ? `Observações: ${obs}\n` : '');
+
+            const url = `https://wa.me/55?text=${encodeURIComponent(msg)}`;
+            window.open(url, '_blank', 'noopener,noreferrer');
+            onClose();
+          }}
+        >
+          <div className="grid gap-4 sm:grid-cols-2">
+            <input
+              name="name"
+              autoComplete="name"
+              required
+              placeholder="Seu nome*"
+              className="h-12 rounded-xl border border-gray-300 px-4 outline-none focus:ring-2 focus:ring-blue-300"
+            />
+            <input
+              name="phone"
+              autoComplete="tel"
+              required
+              placeholder="Telefone (DDD)*"
+              className="h-12 rounded-xl border border-gray-300 px-4 outline-none focus:ring-2 focus:ring-blue-300"
+            />
           </div>
-          <textarea value={obs} onChange={e=>setObs(e.target.value)} className="border rounded-lg px-3 py-2 md:col-span-2" placeholder="Observações"></textarea>
-          <label className="md:col-span-2 text-xs flex items-start gap-2 text-neutral-600">
-            <input type="checkbox" checked={lgpd} onChange={e=>setLgpd(e.target.checked)} />
-            Autorizo o contato por e-mail, WhatsApp e telefone conforme LGPD.
+          <input
+            name="email"
+            autoComplete="email"
+            placeholder="Email*"
+            className="h-12 rounded-xl border border-gray-300 px-4 outline-none focus:ring-2 focus:ring-blue-300"
+            required
+          />
+
+          <div className="flex gap-6">
+            <label className="inline-flex items-center gap-2">
+              <input type="radio" name="tipo" value="Moradia" defaultChecked />
+              <span>Moradia</span>
+            </label>
+            <label className="inline-flex items-center gap-2">
+              <input type="radio" name="tipo" value="Investimento" />
+              <span>Investimento</span>
+            </label>
+          </div>
+
+          <div>
+            <textarea
+              name="obs"
+              rows={4}
+              placeholder="Faça um breve relato da sua busca para direcionarmos seu atendimento (ex.: bairro desejado, nº de quartos, vagas, área privativa/cobertura, faixa de preço)."
+              className="w-full rounded-xl border border-gray-300 p-4 outline-none focus:ring-2 focus:ring-blue-300"
+            />
+          </div>
+
+          <label className="mt-1 flex items-center gap-2 text-sm">
+            <input type="checkbox" name="lgpd" required />
+            <span>Autorizo o contato por e-mail, WhatsApp e telefone conforme LGPD.</span>
           </label>
-        </div>
-        <div className="mt-5 flex items-center justify-end gap-2">
-          <button onClick={onClose} className="btn border">Cancelar</button>
-          <button onClick={trySend} className={`btn btn-primary ${!valid && 'opacity-50 pointer-events-none'}`}>Enviar pelo WhatsApp</button>
-        </div>
+
+          <div className="flex justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="h-11 rounded-xl bg-gray-100 px-5 hover:bg-gray-200"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="h-11 rounded-xl bg-emerald-500 px-5 font-medium text-white hover:bg-emerald-600"
+            >
+              Enviar pelo WhatsApp
+            </button>
+          </div>
+        </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
