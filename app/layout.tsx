@@ -2,7 +2,7 @@ import './globals.css';
 import type { ReactNode } from 'react';
 import Header from '@/app/components/Header';
 import FloatingWhatsApp from '@/app/components/FloatingWhatsApp';
-import LanguageProvider from '@/app/components/lang/LanguageProvider';
+import { LanguageProvider } from '@/app/components/lang/LanguageProvider';
 
 export const metadata = {
   title: 'EasyLar - Portal de Empreendimentos',
