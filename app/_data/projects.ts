@@ -1,63 +1,34 @@
+
 // app/_data/projects.ts
-export type VagaTipo = '1 vaga' | '2 vagas' | 'vaga avulsa' | 'sem vaga demarcada'
+import { Project } from "@/app/types";
 
-export type Project = {
-  id: string
-  slug: string
-  title: string
-  /** Cidade usada nos filtros principais */
-  cidade: 'Belo Horizonte' | 'Contagem'
-  /** Bairro usado no filtro de bairros (opcional mas recomendado) */
-  bairro?: string
-  /** Etiquetas livres (ex.: "Varanda", "Área privativa" etc.) */
-  tags: string[]
-  /** Preço "a partir de" (em reais) */
-  priceFrom: number
-  /** Features estruturadas usadas pelos filtros */
-  features: {
-    quartos: number[]              // ex.: [2,3]
-    vagas: VagaTipo[]              // ex.: ['1 vaga', 'vaga avulsa']
-    varanda?: boolean
-    areaPrivativa?: boolean
-    cobertura?: 'duplex' | 'linear' | null
-  }
-  /** Campo aberto para evoluções futuras */
-  extra?: Record<string, unknown>
-}
-
-// ====== DADOS EXEMPLO ======
-// Pode manter/ajustar conforme seus empreendimentos reais.
 export const projects: Project[] = [
   {
-    id: 'azul-e-verde',
-    slug: 'azul-e-verde',
-    title: 'Azul e Verde',
-    cidade: 'Belo Horizonte',
-    bairro: 'Centro-Sul',
-    priceFrom: 420000,
-    tags: ['Sem vaga demarcada', 'Varanda', 'Área privativa', 'Cobertura duplex'],
-    features: {
-      quartos: [2, 3],
-      vagas: ['sem vaga demarcada', 'vaga avulsa'],
-      varanda: true,
-      areaPrivativa: true,
-      cobertura: 'duplex',
-    },
+    id: "azul-e-verde",
+    slug: "azul-e-verde",
+    name: "Azul e Verde",
+    city: "Belo Horizonte",
+    state: "MG",
+    neighborhood: "Centro-Sul",
+    bedroomsLabel: "2/3 quartos",
+    parkingLabel: "Sem vaga demarcada",
+    features: ["Varanda", "Área privativa", "Cobertura duplex"],
+    priceFrom: "R$ 420.000",
+    thumb: "",
   },
   {
-    id: 'vivence-lagoa',
-    slug: 'vivence-lagoa',
-    title: 'Vivence Lagoa',
-    cidade: 'Belo Horizonte',
-    bairro: 'Pampulha',
-    priceFrom: 299000,
-    tags: ['1 vaga(s)', 'Varanda'],
-    features: {
-      quartos: [2],
-      vagas: ['1 vaga'],
-      varanda: true,
-      areaPrivativa: false,
-      cobertura: null,
-    },
+    id: "vivence-lagoa",
+    slug: "vivence-lagoa",
+    name: "Vivence Lagoa",
+    city: "Belo Horizonte",
+    state: "MG",
+    neighborhood: "Pampulha",
+    bedroomsLabel: "2 quartos",
+    parkingLabel: "1 vaga(s)",
+    features: ["Varanda"],
+    priceFrom: "R$ 299.000",
+    thumb: "",
   },
-]
+];
+
+export default projects;
