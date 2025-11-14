@@ -8,32 +8,31 @@ export const projects: ProjectList = [
     city: "Belo Horizonte - MG",
     neighborhood: "Centro-Sul",
     state: "MG",
-    openingDate: "2025-01-01",
-    deliveryDate: "2029-02-01",
+    openingDate: "2024-11-01",
+    deliveryDate: "2029-01-01",
     priceFrom: 420000,
     isLaunch: true,
     thumb: "/empreendimentos/azul-e-verde/thumb.jpg",
-    gallery: ["/empreendimentos/azul-e-verde/fachada_atual.jpg"],
-    leisure: [
-      "Piscina adulto e infantil",
-      "Espaço gourmet",
-      "Academia",
-      "Salão de festas"
-    ],
+    updatedFacade: "/empreendimentos/azul-e-verde/fachada_atual.jpg",
+    leisure: ["Piscina", "Salão de festas", "Academia"],
     typologies: {
-      oneBedroom: false,
-      twoBedroom: true,
-      threeBedroom: true,
+      // Novo modelo
+      bedrooms: [2, 3],
       coverage: true,
-      privativa: false
+      privativa: false,
+      // Campos antigos (preenchidos para compatibilidade)
+      twoBedroom: true,
+      threeBedroom: true
     },
     parking: {
+      // Novo modelo: 1 e 2 vagas disponíveis
+      spots: [1, 2],
+      // Campos antigos para compatibilidade
       spots1: true,
       spots2: true,
       avulsa: true
     },
-    showFacadeComparison: true,
-    updatedFacade: "/empreendimentos/azul-e-verde/fachada_atual.jpg"
+    showFacadeComparison: false
   },
   {
     id: "vivence-lagoa",
@@ -42,31 +41,23 @@ export const projects: ProjectList = [
     city: "Belo Horizonte - MG",
     neighborhood: "Pampulha",
     state: "MG",
-    openingDate: "2024-06-01",
-    deliveryDate: "2028-12-01",
+    openingDate: "2023-05-01",
+    deliveryDate: "2028-11-01",
     priceFrom: 390000,
     isLaunch: false,
     thumb: "/empreendimentos/vivence-lagoa/thumb.jpg",
-    gallery: ["/empreendimentos/vivence-lagoa/fachada_atual.jpg"],
-    leisure: [
-      "Piscina com raia",
-      "Coworking",
-      "Quadra recreativa"
-    ],
+    updatedFacade: "/empreendimentos/vivence-lagoa/fachada_atual.jpg",
+    leisure: ["Piscina", "Espaço gourmet", "Playground"],
     typologies: {
-      studio: false,
-      oneBedroom: false,
-      twoBedroom: true,
-      threeBedroom: false,
-      coverage: false,
-      privativa: true
+      bedrooms: [2],
+      privativa: true,
+      twoBedroom: true
     },
     parking: {
+      spots: [1],
       spots1: true,
-      spots2: false,
       avulsa: true
     },
     showFacadeComparison: false
   }
 ];
-
