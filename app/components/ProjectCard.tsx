@@ -1,52 +1,87 @@
 "use client";
 
 import React from "react";
-import { Project } from "@/app/types";
+import Link from "next/link";
+import type { Project } from "@/app/types";
 
 type Props = {
   project: Project;
-  onOpenLeadModal?: (project: Project) => void;
 };
 
-function formatCurrency(value: number): string {
-  return value.toLocaleString("pt-BR", {
+function normalizeBedrooms(project: Project): number[] {
+  if (project.typologies.bedrooms && project.typologies.bedrooms.length > 0) {
+    return Array.from(new Set(project.typologies.bedrooms)).sort((a, b) => a - b);
+  }
+
+  const result: number[] = [];
+  if (project.typologies.studio) result.push(0);
+  if (project.typologies.oneBedroom) result.push(1);
+  if (project.typologies.twoBedroom) result.push(2);
+  if (project.typologies.threeBedroom) result.push(3);
+
+  return Array.from(new Set(result)).sort((a, b) => a - b);
+}
+
+function normalizeSpots(project: Project): number[] {
+  if (project.parking.spots && project.parking.spots.length > 0) {
+    return Array.from(new Set(project.parking.spots)).sort((a, b) => a - b);
+  }
+
+  const result: number[] = [];
+  if (project.parking.spots0) result.push(0);
+  if (project.parking.spots1) result.push(1);
+  if (project.parking.spots2) result.push(2);
+
+  return Array.from(new Set(result)).sort((a, b) => a - b);
+}
+
+function formatBedroomsLabels(values: number[]): string[] {
+  return values.map((n) => {
+    if (n === 0) return "Studio";
+    return `${n} quarto${n > 1 ? "s" : ""}`;
+  });
+}
+
+function formatSpotsLabels(values: number[]): string[] {
+  return values.map((n) => {
+    if (n === 0) return "Sem vaga";
+    if (n === 1) return "1 vaga";
+    return `${n} vagas`;
+  });
+}
+
+export const ProjectCard: React.FC<Props> = ({ project }) => {
+  const bedroomsValues = normalizeBedrooms(project);
+  const spotsValues = normalizeSpots(project);
+
+  const bedroomsChips = formatBedroomsLabels(bedroomsValues);
+  const parkingChips = formatSpotsLabels(spotsValues);
+
+  const hasCoverage = project.typologies.coverage;
+  const hasPrivativa = project.typologies.privativa;
+  const hasAvulsa = project.parking.avulsa;
+
+  const labelType = project.isLaunch ? "LANÇAMENTO" : "OPORTUNIDADE";
+  const labelClass = project.isLaunch
+    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+    : "bg-blue-50 text-blue-700 border-blue-200";
+
+  const formattedPrice = new Intl.NumberFormat("pt-BR", {
     style: "currency",
     currency: "BRL",
     maximumFractionDigits: 0
-  });
-}
+  }).format(project.priceFrom);
 
-function formatDeliveryDate(date: string): string {
-  const d = new Date(date);
-  if (Number.isNaN(d.getTime())) return date;
-  return d.toLocaleDateString("pt-BR", {
-    month: "2-digit",
-    year: "numeric"
-  });
-}
-
-function buildTypologyLabel(project: Project): string {
-  const t = project.typologies;
-  const labels: string[] = [];
-
-  if (t.studio) labels.push("Studio");
-  if (t.oneBedroom) labels.push("1 quarto");
-  if (t.twoBedroom) labels.push("2 quartos");
-  if (t.threeBedroom) labels.push("3 quartos");
-  if (t.coverage) labels.push("Cobertura");
-  if (t.privativa) labels.push("Área privativa");
-
-  return labels.join(" • ");
-}
-
-export const ProjectCard: React.FC<Props> = ({ project, onOpenLeadModal }) => {
-  const typologyLabel = buildTypologyLabel(project);
-  const deliveryLabel = formatDeliveryDate(project.deliveryDate);
-  const priceLabel = formatCurrency(project.priceFrom);
+  const formattedDelivery = project.deliveryDate
+    ? new Date(project.deliveryDate).toLocaleDateString("pt-BR", {
+        month: "2-digit",
+        year: "numeric"
+      })
+    : "";
 
   return (
-    <article className="w-full rounded-xl border border-gray-200 bg-white px-5 py-4 shadow-sm transition hover:shadow-md">
-      <header className="mb-2 flex items-center justify-between gap-3">
+    <article className="flex items-stretch justify-between gap-6 rounded-2xl border border-gray-200 bg-white px-6 py-4 shadow-sm">
+      <div className="flex flex-col gap-2">
         <div>
           <h2 className="text-base font-semibold text-gray-900">
             {project.name}
@@ -55,71 +90,73 @@ export const ProjectCard: React.FC<Props> = ({ project, onOpenLeadModal }) => {
             {project.neighborhood} • {project.city}
           </p>
         </div>
-        <div className="flex flex-col items-end gap-1">
-          {project.isLaunch ? (
-            <span className="inline-flex rounded-full bg-emerald-100 px-3 py-0.5 text-[11px] font-medium text-emerald-700">
-              LANÇAMENTO
+
+        <div className="flex flex-wrap gap-2 text-[11px]">
+          {bedroomsChips.map((chip) => (
+            <span
+              key={chip}
+              className="rounded-full bg-gray-100 px-3 py-1 text-gray-800"
+            >
+              {chip}
             </span>
-          ) : (
-            <span className="inline-flex rounded-full bg-blue-100 px-3 py-0.5 text-[11px] font-medium text-blue-700">
-              OPORTUNIDADE
+          ))}
+          {hasCoverage && (
+            <span className="rounded-full bg-gray-100 px-3 py-1 text-gray-800">
+              Cobertura
             </span>
           )}
-          <span className="text-[11px] text-gray-500">
-            Entrega prevista: {deliveryLabel}
-          </span>
+          {hasPrivativa && (
+            <span className="rounded-full bg-gray-100 px-3 py-1 text-gray-800">
+              Área privativa
+            </span>
+          )}
         </div>
-      </header>
 
-      <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-gray-700">
-        {typologyLabel && (
-          <span className="inline-flex rounded-full bg-gray-100 px-3 py-1">
-            {typologyLabel}
-          </span>
-        )}
-        {project.parking.spots1 && (
-          <span className="inline-flex rounded-full bg-gray-100 px-3 py-1">
-            1 vaga
-          </span>
-        )}
-        {project.parking.spots2 && (
-          <span className="inline-flex rounded-full bg-gray-100 px-3 py-1">
-            2 vagas
-          </span>
-        )}
-        {project.parking.avulsa && (
-          <span className="inline-flex rounded-full bg-gray-100 px-3 py-1">
-            Vaga avulsa
-          </span>
-        )}
+        <div className="flex flex-wrap gap-2 text-[11px]">
+          {parkingChips.map((chip) => (
+            <span
+              key={chip}
+              className="rounded-full bg-gray-100 px-3 py-1 text-gray-800"
+            >
+              {chip}
+            </span>
+          ))}
+          {hasAvulsa && (
+            <span className="rounded-full bg-gray-100 px-3 py-1 text-gray-800">
+              Vaga avulsa
+            </span>
+          )}
+        </div>
+
+        <div className="mt-2 text-xs text-gray-600">
+          <div className="text-[11px] text-gray-500">A partir de</div>
+          <div className="text-lg font-semibold text-gray-900">
+            {formattedPrice}
+          </div>
+        </div>
       </div>
 
-      <footer className="flex items-center justify-between">
-        <div className="flex flex-col">
-          <span className="text-[11px] text-gray-500">A partir de</span>
-          <span className="text-lg font-semibold text-gray-900">
-            {priceLabel}
-          </span>
-        </div>
-
-        <div className="flex gap-2">
-          <a
-            href={`/imovel/${project.slug}`}
-            className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-800 hover:bg-gray-50"
+      <div className="flex flex-col items-end justify-between gap-3 text-right text-xs">
+        <div className="flex flex-col items-end gap-1">
+          <span
+            className={`rounded-full border px-3 py-1 text-[10px] font-semibold uppercase ${labelClass}`}
           >
-            Ver detalhes
-          </a>
-          {onOpenLeadModal && (
-            <button
-              type="button"
-              onClick={() => onOpenLeadModal(project)}
-              className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700"
-            >
-              Falar com consultor
-            </button>
+            {labelType}
+          </span>
+          {formattedDelivery && (
+            <span className="text-[11px] text-gray-600">
+              Entrega prevista: {formattedDelivery}
+            </span>
           )}
         </div>
-      </footer>
+
+        <Link
+          href={`/imovel/${project.slug}`}
+          className="rounded-full bg-gray-900 px-4 py-2 text-xs font-semibold text-white hover:bg-gray-800"
+        >
+          Ver detalhes
+        </Link>
+      </div>
     </article>
   );
 };
