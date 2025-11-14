@@ -44,6 +44,10 @@ export default function AdminPage() {
   });
 
   const handleCreateLead = (formData: FormData) => {
+    const purposeRaw = formData.get("purpose");
+    const purpose: Lead["purpose"] =
+      purposeRaw === "investimento" ? "investimento" : "moradia";
+
     const newLead: Lead = {
       id: String(Date.now()),
       name: String(formData.get("name") || ""),
@@ -51,10 +55,7 @@ export default function AdminPage() {
       email: String(formData.get("email") || ""),
       typology: String(formData.get("typology") || ""),
       notes: String(formData.get("notes") || ""),
-      purpose:
-        (formData.get("purpose") === "investimento"
-          ? "investimento"
-          : "moradia") || "moradia",
+      purpose,
       stage: "novo"
     };
 
