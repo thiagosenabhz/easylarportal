@@ -31,11 +31,7 @@ export const defaultFilters: SearchFilters = {
   parking: []
 };
 
-export const SearchSidebar: React.FC<Props> = ({
-  projects,
-  value,
-  onChange
-}) => {
+const SearchSidebar: React.FC<Props> = ({ projects, value, onChange }) => {
   const availableCities = useMemo(() => {
     const set = new Set<string>();
     projects.forEach((p) => set.add(p.city));
@@ -252,3 +248,6 @@ export const SearchSidebar: React.FC<Props> = ({
     </aside>
   );
 };
+
+export { SearchSidebar };
+export default SearchSidebar;
