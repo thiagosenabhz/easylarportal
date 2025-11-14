@@ -7,6 +7,32 @@ import SearchSidebar, {
   type SearchFilters
 } from "@/app/components/SearchSidebar";
 import { ProjectCard } from "@/app/components/ProjectCard";
+import type { Project } from "@/app/types";
+
+function getProjectBedrooms(project: Project): number[] {
+  if (project.typologies.bedrooms && project.typologies.bedrooms.length > 0) {
+    return project.typologies.bedrooms;
+  }
+
+  const result: number[] = [];
+  if (project.typologies.studio) result.push(0);
+  if (project.typologies.oneBedroom) result.push(1);
+  if (project.typologies.twoBedroom) result.push(2);
+  if (project.typologies.threeBedroom) result.push(3);
+  return result;
+}
+
+function getProjectSpots(project: Project): number[] {
+  if (project.parking.spots && project.parking.spots.length > 0) {
+    return project.parking.spots;
+  }
+
+  const result: number[] = [];
+  if (project.parking.spots0) result.push(0);
+  if (project.parking.spots1) result.push(1);
+  if (project.parking.spots2) result.push(2);
+  return result;
+}
 
 export default function HomePage() {
   const [filters, setFilters] = useState<SearchFilters>(defaultFilters);
@@ -24,35 +50,29 @@ export default function HomePage() {
         return false;
       }
 
-      // Tipologias
-      if (filters.typologies.length > 0) {
-        const t = p.typologies;
-        const matchesTypology = filters.typologies.some((typo) => {
-          if (typo === "studio") return !!t.studio;
-          if (typo === "oneBedroom") return !!t.oneBedroom;
-          if (typo === "twoBedroom") return !!t.twoBedroom;
-          if (typo === "threeBedroom") return !!t.threeBedroom;
-          return false;
-        });
-        if (!matchesTypology) return false;
+      const projectBedrooms = getProjectBedrooms(p);
+      const projectSpots = getProjectSpots(p);
+
+      // Tipologias (quartos)
+      if (filters.bedrooms.length > 0) {
+        const matchesBedrooms = filters.bedrooms.some((n) =>
+          projectBedrooms.includes(n)
+        );
+        if (!matchesBedrooms) return false;
       }
 
       // Vagas
-      if (filters.parking.length > 0) {
-        const park = p.parking;
-        const matchesParking = filters.parking.some((pFilter) => {
-          if (pFilter === "spots0") return !!park.spots0;
-          if (pFilter === "spots1") return !!park.spots1;
-          if (pFilter === "spots2") return !!park.spots2;
-          if (pFilter === "avulsa") return !!park.avulsa;
-          return false;
-        });
-        if (!matchesParking) return false;
+      if (filters.spots.length > 0) {
+        const matchesSpots = filters.spots.some((s) =>
+          projectSpots.includes(s)
+        );
+        if (!matchesSpots) return false;
       }
 
       // Diferenciais
       if (filters.hasCoverage && !p.typologies.coverage) return false;
       if (filters.hasPrivativa && !p.typologies.privativa) return false;
+      if (filters.hasAvulsa && !p.parking.avulsa) return false;
 
       return true;
     });
