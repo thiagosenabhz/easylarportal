@@ -1,15 +1,16 @@
 "use client";
 
 import React, { useMemo } from "react";
-import { Project } from "@/app/types";
+import type { Project } from "@/app/types";
 
 export type SearchFilters = {
   city?: string;
   neighborhoods: string[];
-  typologies: ("studio" | "oneBedroom" | "twoBedroom" | "threeBedroom")[];
+  bedrooms: number[];
   hasCoverage: boolean;
   hasPrivativa: boolean;
-  parking: ("spots0" | "spots1" | "spots2" | "avulsa")[];
+  spots: number[];      // inclui 0 quando usuário selecionar "sem vaga"
+  hasAvulsa: boolean;
 };
 
 type Props = {
@@ -22,13 +23,39 @@ function toggleInArray<T>(arr: T[], value: T): T[] {
   return arr.includes(value) ? arr.filter((v) => v !== value) : [...arr, value];
 }
 
+function getProjectBedrooms(project: Project): number[] {
+  if (project.typologies.bedrooms && project.typologies.bedrooms.length > 0) {
+    return project.typologies.bedrooms;
+  }
+
+  const result: number[] = [];
+  if (project.typologies.studio) result.push(0);
+  if (project.typologies.oneBedroom) result.push(1);
+  if (project.typologies.twoBedroom) result.push(2);
+  if (project.typologies.threeBedroom) result.push(3);
+  return result;
+}
+
+function getProjectSpots(project: Project): number[] {
+  if (project.parking.spots && project.parking.spots.length > 0) {
+    return project.parking.spots;
+  }
+
+  const result: number[] = [];
+  if (project.parking.spots0) result.push(0);
+  if (project.parking.spots1) result.push(1);
+  if (project.parking.spots2) result.push(2);
+  return result;
+}
+
 export const defaultFilters: SearchFilters = {
   city: undefined,
   neighborhoods: [],
-  typologies: [],
+  bedrooms: [],
   hasCoverage: false,
   hasPrivativa: false,
-  parking: []
+  spots: [],
+  hasAvulsa: false
 };
 
 const SearchSidebar: React.FC<Props> = ({ projects, value, onChange }) => {
@@ -38,36 +65,60 @@ const SearchSidebar: React.FC<Props> = ({ projects, value, onChange }) => {
     return Array.from(set);
   }, [projects]);
 
-  const filteredByCityAndTypology = useMemo(() => {
+  const filteredByCity = useMemo(
+    () => projects.filter((p) => !value.city || p.city === value.city),
+    [projects, value.city]
+  );
+
+  const availableBedrooms = useMemo(() => {
+    const set = new Set<number>();
+    filteredByCity.forEach((p) => {
+      getProjectBedrooms(p).forEach((n) => set.add(n));
+    });
+    return Array.from(set).sort((a, b) => a - b);
+  }, [filteredByCity]);
+
+  const availableSpotsInfo = useMemo(() => {
+    const spotsSet = new Set<number>();
+    let hasAvulsa = false;
+
+    filteredByCity.forEach((p) => {
+      getProjectSpots(p).forEach((n) => spotsSet.add(n));
+      if (p.parking.avulsa) hasAvulsa = true;
+    });
+
+    const spots = Array.from(spotsSet).sort((a, b) => a - b);
+    const hasZero = spots.includes(0);
+
+    return {
+      spots,
+      hasZero,
+      hasAvulsa
+    };
+  }, [filteredByCity]);
+
+  const filteredNeighborhoodsBase = useMemo(() => {
     return projects.filter((p) => {
       if (value.city && p.city !== value.city) return false;
 
-      if (value.typologies.length > 0) {
-        const t = p.typologies;
-        const matchesTypology = value.typologies.some((typo) => {
-          if (typo === "studio") return !!t.studio;
-          if (typo === "oneBedroom") return !!t.oneBedroom;
-          if (typo === "twoBedroom") return !!t.twoBedroom;
-          if (typo === "threeBedroom") return !!t.threeBedroom;
-          return false;
-        });
-        if (!matchesTypology) return false;
+      const projectBedrooms = getProjectBedrooms(p);
+      const projectSpots = getProjectSpots(p);
+
+      if (value.bedrooms.length > 0) {
+        const matchesBedrooms = value.bedrooms.some((n) =>
+          projectBedrooms.includes(n)
+        );
+        if (!matchesBedrooms) return false;
       }
 
-      if (value.parking.length > 0) {
-        const park = p.parking;
-        const matchesParking = value.parking.some((pFilter) => {
-          if (pFilter === "spots0") return !!park.spots0;
-          if (pFilter === "spots1") return !!park.spots1;
-          if (pFilter === "spots2") return !!park.spots2;
-          if (pFilter === "avulsa") return !!park.avulsa;
-          return false;
-        });
-        if (!matchesParking) return false;
+      if (value.spots.length > 0) {
+        const matchesSpots = value.spots.some((s) => projectSpots.includes(s));
+        if (!matchesSpots) return false;
       }
 
       if (value.hasCoverage && !p.typologies.coverage) return false;
       if (value.hasPrivativa && !p.typologies.privativa) return false;
+      if (value.hasAvulsa && !p.parking.avulsa) return false;
 
       return true;
     });
@@ -75,16 +126,16 @@ const SearchSidebar: React.FC<Props> = ({ projects, value, onChange }) => {
 
   const availableNeighborhoods = useMemo(() => {
     const set = new Set<string>();
-    filteredByCityAndTypology.forEach((p) => set.add(p.neighborhood));
+    filteredNeighborhoodsBase.forEach((p) => set.add(p.neighborhood));
     return Array.from(set);
-  }, [filteredByCityAndTypology]);
+  }, [filteredNeighborhoodsBase]);
 
   const handleChange = (partial: Partial<SearchFilters>) => {
     onChange({ ...value, ...partial });
   };
 
   return (
-    <aside className="sticky top-20 flex h-[calc(100vh-5rem)] w-80 flex-col gap-4 border-r border-gray-200 bg-white px-6 py-6">
+    <aside className="sticky top-4 flex h-[calc(100vh-4rem)] w-80 flex-col gap-4 border-r border-gray-200 bg-white px-6 py-4">
       {/* Cidade */}
       <div>
         <h3 className="mb-2 text-sm font-semibold text-gray-900">Cidade</h3>
@@ -139,29 +190,21 @@ const SearchSidebar: React.FC<Props> = ({ projects, value, onChange }) => {
         </div>
       </div>
 
-      {/* Tipologia */}
+      {/* Tipologia (quartos) */}
       <div>
         <h3 className="mb-2 text-sm font-semibold text-gray-900">Tipologia</h3>
         <div className="flex flex-wrap gap-2">
-          {[
-            { key: "studio", label: "Studio" },
-            { key: "oneBedroom", label: "1 quarto" },
-            { key: "twoBedroom", label: "2 quartos" },
-            { key: "threeBedroom", label: "3 quartos" }
-          ].map((t) => {
-            const isActive = value.typologies.includes(
-              t.key as SearchFilters["typologies"][number]
-            );
+          {availableBedrooms.map((n) => {
+            const isActive = value.bedrooms.includes(n);
+            const label =
+              n === 0 ? "Studio" : `${n} quarto${n > 1 ? "s" : ""}`;
             return (
               <button
-                key={t.key}
+                key={n}
                 type="button"
                 onClick={() =>
                   handleChange({
-                    typologies: toggleInArray(
-                      value.typologies,
-                      t.key as SearchFilters["typologies"][number]
-                    )
+                    bedrooms: toggleInArray(value.bedrooms, n)
                   })
                 }
                 className={`rounded-full border px-3 py-1 text-xs ${
@@ -170,7 +213,7 @@ const SearchSidebar: React.FC<Props> = ({ projects, value, onChange }) => {
                     : "border-gray-300 bg-white text-gray-800 hover:bg-gray-50"
                 }`}
               >
-                {t.label}
+                {label}
               </button>
             );
           })}
@@ -181,37 +224,66 @@ const SearchSidebar: React.FC<Props> = ({ projects, value, onChange }) => {
       <div>
         <h3 className="mb-2 text-sm font-semibold text-gray-900">Vagas</h3>
         <div className="flex flex-wrap gap-2">
-          {[
-            { key: "spots0", label: "Sem vaga" },
-            { key: "spots1", label: "1 vaga" },
-            { key: "spots2", label: "2 vagas" },
-            { key: "avulsa", label: "Vaga avulsa" }
-          ].map((v) => {
-            const isActive = value.parking.includes(
-              v.key as SearchFilters["parking"][number]
-            );
-            return (
-              <button
-                key={v.key}
-                type="button"
-                onClick={() =>
-                  handleChange({
-                    parking: toggleInArray(
-                      value.parking,
-                      v.key as SearchFilters["parking"][number]
-                    )
-                  })
-                }
-                className={`rounded-full border px-3 py-1 text-xs ${
-                  isActive
-                    ? "border-blue-600 bg-blue-50 text-blue-700"
-                    : "border-gray-300 bg-white text-gray-800 hover:bg-gray-50"
-                }`}
-              >
-                {v.label}
-              </button>
-            );
-          })}
+          {availableSpotsInfo.hasZero && (
+            <button
+              type="button"
+              onClick={() =>
+                handleChange({
+                  spots: toggleInArray(value.spots, 0)
+                })
+              }
+              className={`rounded-full border px-3 py-1 text-xs ${
+                value.spots.includes(0)
+                  ? "border-blue-600 bg-blue-50 text-blue-700"
+                  : "border-gray-300 bg-white text-gray-800 hover:bg-gray-50"
+              }`}
+            >
+              Sem vaga
+            </button>
+          )}
+
+          {availableSpotsInfo.spots
+            .filter((n) => n > 0)
+            .map((n) => {
+              const isActive = value.spots.includes(n);
+              const label = n === 1 ? "1 vaga" : `${n} vagas`;
+              return (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() =>
+                    handleChange({
+                      spots: toggleInArray(value.spots, n)
+                    })
+                  }
+                  className={`rounded-full border px-3 py-1 text-xs ${
+                    isActive
+                      ? "border-blue-600 bg-blue-50 text-blue-700"
+                      : "border-gray-300 bg-white text-gray-800 hover:bg-gray-50"
+                  }`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+
+          {availableSpotsInfo.hasAvulsa && (
+            <button
+              type="button"
+              onClick={() =>
+                handleChange({
+                  hasAvulsa: !value.hasAvulsa
+                })
+              }
+              className={`rounded-full border px-3 py-1 text-xs ${
+                value.hasAvulsa
+                  ? "border-blue-600 bg-blue-50 text-blue-700"
+                  : "border-gray-300 bg-white text-gray-800 hover:bg-gray-50"
+              }`}
+            >
+              Vaga avulsa
+            </button>
+          )}
         </div>
       </div>
 
