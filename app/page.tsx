@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { projects } from "@/app/_data/projects";
 import SearchSidebar, {
   defaultFilters,
@@ -36,9 +37,11 @@ function getProjectSpots(project: Project): number[] {
 
 export default function HomePage() {
   const [filters, setFilters] = useState<SearchFilters>(defaultFilters);
+  const searchParams = useSearchParams();
+  const view = searchParams.get("view");
 
   const filteredProjects = useMemo(() => {
-    return projects.filter((p) => {
+    let list = projects.filter((p) => {
       // Cidade
       if (filters.city && p.city !== filters.city) return false;
 
@@ -76,10 +79,19 @@ export default function HomePage() {
 
       return true;
     });
-  }, [filters]);
+
+    // Filtro global de visão (Pré-abertura / Oportunidades)
+    if (view === "launch") {
+      list = list.filter((p) => p.isLaunch);
+    } else if (view === "stock") {
+      list = list.filter((p) => !p.isLaunch);
+    }
+
+    return list;
+  }, [filters, view]);
 
   return (
-    <main className="mx-auto max-w-7xl px-4 lg:px-6 py-6 grid md:grid-cols-[20rem,1fr] gap-8">
+    <main className="mx-auto grid max-w-7xl gap-8 px-4 py-6 lg:grid-cols-[20rem,1fr] lg:px-6">
       <SearchSidebar
         projects={projects}
         value={filters}
