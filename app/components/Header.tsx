@@ -1,17 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import React from "react";
 
 export const Header: React.FC = () => {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const view = searchParams.get("view");
 
   const isHome = pathname === "/";
-  const isLaunchView = isHome && view === "launch";
-  const isStockView = isHome && view === "stock";
+  const isAdmin = pathname.startsWith("/admin");
 
   return (
     <header className="bg-blue-700 text-white">
@@ -23,41 +20,37 @@ export const Header: React.FC = () => {
         </div>
 
         <nav className="flex items-center gap-4 text-sm">
-          {/* REMOVIDO: "Buscar" */}
+          {/* "Buscar" removido conforme especificação.
+              Pré-abertura e Oportunidades continuam apontando para a home com query. */}
 
           <Link
             href="/?view=launch"
-            className={`rounded-full px-3 py-1 ${
-              isLaunchView
-                ? "bg-white text-blue-700 font-semibold"
-                : "hover:bg-blue-600"
-            }`}
+            className="rounded-full px-3 py-1 hover:bg-blue-600"
           >
             Pré-abertura
           </Link>
 
           <Link
             href="/?view=stock"
-            className={`rounded-full px-3 py-1 ${
-              isStockView
-                ? "bg-white text-blue-700 font-semibold"
-                : "hover:bg-blue-600"
-            }`}
+            className="rounded-full px-3 py-1 hover:bg-blue-600"
           >
             Oportunidades
           </Link>
 
           <Link
             href="/admin"
-            className="rounded-md bg-blue-600 px-3 py-1 font-semibold hover:bg-blue-500"
+            className={`rounded-md px-3 py-1 font-semibold ${
+              isAdmin
+                ? "bg-white text-blue-700"
+                : "bg-blue-600 hover:bg-blue-500"
+            }`}
           >
             Acesso do administrador
           </Link>
 
-          {/* Botão PT/EN mantido, sem alterar a lógica atual de tradução global.
-             Patch dedicado de multilíngue virá depois. */}
+          {/* Botão PT/EN mantido, lógica de tradução continua a mesma. */}
           <Link
-            href={pathname === "/" ? "/?lang=en" : `${pathname}?lang=en`}
+            href={isHome ? "/?lang=en" : `${pathname}?lang=en`}
             className="rounded-md bg-white px-3 py-1 text-xs font-semibold text-blue-700 hover:bg-gray-100"
           >
             EN
@@ -67,5 +60,3 @@ export const Header: React.FC = () => {
     </header>
   );
 };
-
-export default Header;
