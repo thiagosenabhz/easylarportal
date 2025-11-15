@@ -1,13 +1,13 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { projects } from "@/app/_data/projects";
 import SearchSidebar, {
   defaultFilters,
-  type SearchFilters
+  type SearchFilters,
 } from "@/app/components/SearchSidebar";
-import { ProjectCard } from "@/app/components/ProjectCard";
+import ProjectCard from "@/app/components/ProjectCard";
 import type { Project } from "@/app/types";
 
 function getProjectBedrooms(project: Project): number[] {
