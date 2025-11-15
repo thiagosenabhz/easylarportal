@@ -1,143 +1,27 @@
 "use client";
 
 import React, { useState } from "react";
-import type { Project } from "@/app/types";
+import CRMBoard from "@/app/components/admin/CRMBoard";
 
-type Lead = {
-  id: string;
-  name: string;
-  phone: string;
-  email: string;
-  typology: string;
-  notes?: string;
-  purpose: "moradia" | "investimento";
-  stage:
-    | "novo"
-    | "tentativa"
-    | "contato"
-    | "visita_agendada"
-    | "visita_realizada"
-    | "venda"
-    | "desistencia";
-};
-
-type TabId = "novo" | "crm" | "relatorios";
-
-const STAGES: { id: Lead["stage"]; label: string }[] = [
-  { id: "novo", label: "Novo contato" },
-  { id: "tentativa", label: "Tentativa de contato" },
-  { id: "contato", label: "Contato realizado" },
-  { id: "visita_agendada", label: "Visita agendada" },
-  { id: "visita_realizada", label: "Visita realizada" },
-  { id: "venda", label: "Venda" },
-  { id: "desistencia", label: "Desistência" }
-];
+type Tab = "novo" | "crm" | "relatorios";
 
 export default function AdminPage() {
-  const [activeTab, setActiveTab] = useState<TabId>("novo");
-  const [leads, setLeads] = useState<Lead[]>([]);
-
-  const [projectDraft, setProjectDraft] = useState<Partial<Project>>({
-    typologies: {},
-    parking: {},
-    leisure: []
-  });
-
-  const handleCreateLead = (formData: FormData) => {
-    const purposeRaw = formData.get("purpose");
-    const purpose: Lead["purpose"] =
-      purposeRaw === "investimento" ? "investimento" : "moradia";
-
-    const newLead: Lead = {
-      id: String(Date.now()),
-      name: String(formData.get("name") || ""),
-      phone: String(formData.get("phone") || ""),
-      email: String(formData.get("email") || ""),
-      typology: String(formData.get("typology") || ""),
-      notes: String(formData.get("notes") || ""),
-      purpose,
-      stage: "novo"
-    };
-
-    setLeads((current) => [newLead, ...current]);
-  };
-
-  const handleMoveLead = (id: string, newStage: Lead["stage"]) => {
-    setLeads((current) =>
-      current.map((lead) =>
-        lead.id === id
-          ? {
-              ...lead,
-              stage: newStage
-            }
-          : lead
-      )
-    );
-  };
-
-  const handleProjectDraftChange = (field: keyof Project, value: any) => {
-    setProjectDraft((prev) => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  const handleProjectCheckboxGroup = (
-    group: "typologies" | "parking",
-    key: string,
-    checked: boolean
-  ) => {
-    setProjectDraft((prev) => ({
-      ...prev,
-      [group]: {
-        ...(prev[group] || {}),
-        [key]: checked
-      }
-    }));
-  };
-
-  const handleSaveDraft = (formData: FormData) => {
-    const leisureRaw = String(formData.get("leisure") || "");
-    const leisureList = leisureRaw
-      .split(",")
-      .map((item) => item.trim())
-      .filter(Boolean);
-
-    const draft: Partial<Project> = {
-      ...projectDraft,
-      name: String(formData.get("name") || ""),
-      slug: String(formData.get("slug") || ""),
-      city: String(formData.get("city") || ""),
-      neighborhood: String(formData.get("neighborhood") || ""),
-      openingDate: String(formData.get("openingDate") || ""),
-      deliveryDate: String(formData.get("deliveryDate") || ""),
-      priceFrom: Number(formData.get("priceFrom") || 0),
-      thumb: String(formData.get("thumb") || ""),
-      updatedFacade: String(formData.get("updatedFacade") || ""),
-      leisure: leisureList
-    };
-
-    console.log("Rascunho de empreendimento (para futura integração):", draft);
-    alert(
-      "Rascunho salvo no console do navegador. Integração com banco (Supabase) será feita em etapa futura."
-    );
-  };
+  const [activeTab, setActiveTab] = useState<Tab>("novo");
 
   return (
-    <main className="mx-auto max-w-6xl px-6 py-10">
-      <h1 className="mb-6 text-2xl font-semibold text-gray-900">
+    <main className="mx-auto max-w-6xl px-4 py-6 lg:px-6">
+      <h1 className="mb-6 text-xl font-semibold text-gray-900">
         Painel do Administrador
       </h1>
 
-      {/* Tabs */}
-      <div className="mb-8 inline-flex rounded-full border border-gray-200 bg-gray-100 p-1 text-sm">
+      <div className="mb-6 flex gap-2">
         <button
           type="button"
           onClick={() => setActiveTab("novo")}
-          className={`rounded-full px-4 py-1.5 ${
+          className={`rounded-full px-4 py-2 text-sm font-semibold ${
             activeTab === "novo"
               ? "bg-blue-600 text-white"
-              : "text-gray-700 hover:bg-white"
+              : "bg-gray-100 text-gray-800 hover:bg-gray-200"
           }`}
         >
           Novo Empreendimento
@@ -145,10 +29,10 @@ export default function AdminPage() {
         <button
           type="button"
           onClick={() => setActiveTab("crm")}
-          className={`rounded-full px-4 py-1.5 ${
+          className={`rounded-full px-4 py-2 text-sm font-semibold ${
             activeTab === "crm"
               ? "bg-blue-600 text-white"
-              : "text-gray-700 hover:bg-white"
+              : "bg-gray-100 text-gray-800 hover:bg-gray-200"
           }`}
         >
           CRM
@@ -156,394 +40,269 @@ export default function AdminPage() {
         <button
           type="button"
           onClick={() => setActiveTab("relatorios")}
-          className={`rounded-full px-4 py-1.5 ${
+          className={`rounded-full px-4 py-2 text-sm font-semibold ${
             activeTab === "relatorios"
               ? "bg-blue-600 text-white"
-              : "text-gray-700 hover:bg-white"
+              : "bg-gray-100 text-gray-800 hover:bg-gray-200"
           }`}
         >
           Relatórios
         </button>
       </div>
 
-      {activeTab === "novo" && (
-        <section className="space-y-6 rounded-2xl bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-gray-900">
-            Novo empreendimento
-          </h2>
-          <p className="text-sm text-gray-600">
-            Este formulário gera um rascunho completo do empreendimento alinhado
-            ao modelo oficial do EasyLar. Em uma próxima etapa, será integrado
-            ao Supabase/banco de dados.
-          </p>
-
-          <form
-            action={handleSaveDraft}
-            className="grid grid-cols-1 gap-5 md:grid-cols-2"
-          >
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-700">
-                Nome do empreendimento
-              </label>
-              <input
-                name="name"
-                required
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-700">
-                Slug (URL)
-              </label>
-              <input
-                name="slug"
-                required
-                placeholder="ex.: azul-e-verde"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-700">
-                Cidade
-              </label>
-              <input
-                name="city"
-                placeholder="Belo Horizonte - MG"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-700">
-                Bairro
-              </label>
-              <input
-                name="neighborhood"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-700">
-                Data de abertura de vendas
-              </label>
-              <input
-                name="openingDate"
-                type="date"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-700">
-                Previsão de entrega
-              </label>
-              <input
-                name="deliveryDate"
-                type="date"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-700">
-                Preço a partir de (R$)
-              </label>
-              <input
-                name="priceFrom"
-                type="number"
-                min={0}
-                step={1000}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-700">
-                Itens das áreas de lazer (separados por vírgula)
-              </label>
-              <textarea
-                name="leisure"
-                rows={3}
-                placeholder="Piscina, Salão de festas, Academia..."
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              />
-            </div>
-
-            {/* Tipologias */}
-            <div className="space-y-2 md:col-span-2">
-              <h3 className="text-xs font-semibold text-gray-800">
-                Tipologias
-              </h3>
-              <div className="flex flex-wrap gap-4 text-xs">
-                {[
-                  ["studio", "Studio"],
-                  ["oneBedroom", "1 quarto"],
-                  ["twoBedroom", "2 quartos"],
-                  ["threeBedroom", "3 quartos"],
-                  ["coverage", "Cobertura"],
-                  ["privativa", "Área privativa"]
-                ].map(([key, label]) => (
-                  <label key={key} className="inline-flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      onChange={(e) =>
-                        handleProjectCheckboxGroup(
-                          "typologies",
-                          key,
-                          e.target.checked
-                        )
-                      }
-                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    <span>{label}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {/* Vagas */}
-            <div className="space-y-2 md:col-span-2">
-              <h3 className="text-xs font-semibold text-gray-800">Vagas</h3>
-              <div className="flex flex-wrap gap-4 text-xs">
-                {[
-                  ["spots0", "Sem vaga"],
-                  ["spots1", "1 vaga"],
-                  ["spots2", "2 vagas"],
-                  ["avulsa", "Vaga avulsa"]
-                ].map(([key, label]) => (
-                  <label key={key} className="inline-flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      onChange={(e) =>
-                        handleProjectCheckboxGroup(
-                          "parking",
-                          key,
-                          e.target.checked
-                        )
-                      }
-                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    <span>{label}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {/* Imagens */}
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-700">
-                Imagem principal (thumb) - caminho em /public
-              </label>
-              <input
-                name="thumb"
-                placeholder="/empreendimentos/slug/thumb.jpg"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-700">
-                Fachada atual (opcional) - caminho em /public
-              </label>
-              <input
-                name="updatedFacade"
-                placeholder="/empreendimentos/slug/fachada_atual.jpg"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              />
-            </div>
-
-            <div className="md:col-span-2 flex justify-end">
-              <button
-                type="submit"
-                className="rounded-lg bg-blue-600 px-6 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-              >
-                Salvar rascunho
-              </button>
-            </div>
-          </form>
-        </section>
-      )}
-
+      {activeTab === "novo" && <NewProjectForm />}
       {activeTab === "crm" && (
-        <section className="space-y-6">
-          {/* Formulário rápido de lead */}
-          <div className="rounded-2xl bg-white p-6 shadow-sm">
-            <h2 className="mb-3 text-lg font-semibold text-gray-900">CRM</h2>
-            <p className="mb-4 text-sm text-gray-600">
-              Adicione leads rapidamente e organize-os pelas etapas de funil.
-            </p>
-
-            <form
-              action={handleCreateLead}
-              className="grid grid-cols-1 gap-4 md:grid-cols-3"
-            >
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-700">
-                  Nome
-                </label>
-                <input
-                  name="name"
-                  required
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-700">
-                  Telefone
-                </label>
-                <input
-                  name="phone"
-                  required
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-700">
-                  Email
-                </label>
-                <input
-                  name="email"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-700">
-                  Tipologia de interesse
-                </label>
-                <input
-                  name="typology"
-                  placeholder="2 quartos, cobertura, privativa..."
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <span className="text-xs font-medium text-gray-700">
-                  Finalidade
-                </span>
-                <div className="flex gap-4 text-xs">
-                  <label className="inline-flex items-center gap-1">
-                    <input
-                      type="radio"
-                      name="purpose"
-                      value="moradia"
-                      defaultChecked
-                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    <span>Moradia</span>
-                  </label>
-                  <label className="inline-flex items-center gap-1">
-                    <input
-                      type="radio"
-                      name="purpose"
-                      value="investimento"
-                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    <span>Investimento</span>
-                  </label>
-                </div>
-              </div>
-
-              <div className="space-y-1 md:col-span-2">
-                <label className="text-xs font-medium text-gray-700">
-                  Observações
-                </label>
-                <textarea
-                  name="notes"
-                  rows={2}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                />
-              </div>
-
-              <div className="md:col-span-3 flex justify-end">
-                <button
-                  type="submit"
-                  className="rounded-lg bg-emerald-600 px-6 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
-                >
-                  Adicionar lead
-                </button>
-              </div>
-            </form>
-          </div>
-
-          {/* Kanban simplificado */}
-          <div className="grid grid-cols-1 gap-4 overflow-x-auto md:grid-cols-4 lg:grid-cols-7">
-            {STAGES.map((stage) => (
-              <div
-                key={stage.id}
-                className="flex min-h-[220px] flex-col rounded-2xl bg-white p-3 shadow-sm"
-              >
-                <h3 className="mb-2 text-xs font-semibold uppercase text-gray-700">
-                  {stage.label}
-                </h3>
-                <div className="flex flex-1 flex-col gap-2">
-                  {leads
-                    .filter((lead) => lead.stage === stage.id)
-                    .map((lead) => (
-                      <div
-                        key={lead.id}
-                        className="rounded-xl border border-gray-200 bg-gray-50 p-2 text-[11px]"
-                      >
-                        <div className="mb-1 font-semibold text-gray-900">
-                          {lead.name}
-                        </div>
-                        <div className="mb-1 space-y-0.5 text-gray-700">
-                          <div>{lead.phone}</div>
-                          {lead.email && <div>{lead.email}</div>}
-                          {lead.typology && <div>{lead.typology}</div>}
-                        </div>
-                        {lead.notes && (
-                          <p className="mb-1 line-clamp-3 text-[10px] text-gray-600">
-                            {lead.notes}
-                          </p>
-                        )}
-                        <div className="mt-1 flex flex-wrap gap-1">
-                          {STAGES.map((s) => (
-                            <button
-                              key={s.id}
-                              type="button"
-                              onClick={() => handleMoveLead(lead.id, s.id)}
-                              className={`rounded-full border px-2 py-0.5 text-[9px] ${
-                                s.id === lead.stage
-                                  ? "border-blue-600 bg-blue-50 text-blue-700"
-                                  : "border-gray-300 text-gray-600 hover:bg-white"
-                              }`}
-                            >
-                              {s.label.split(" ")[0]}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              </div>
-            ))}
-          </div>
+        <section>
+          <CRMBoard />
         </section>
       )}
-
       {activeTab === "relatorios" && (
-        <section className="rounded-2xl bg-white p-6 text-sm text-gray-700 shadow-sm">
-          <h2 className="mb-3 text-lg font-semibold text-gray-900">
-            Relatórios
-          </h2>
-          <p>
-            Nesta primeira versão, os relatórios ainda não estão conectados a
-            um banco de dados. Em etapas futuras, aqui você verá indicadores
-            como:
-          </p>
-          <ul className="mt-2 list-disc pl-5">
-            <li>Quantidade de leads por estágio;</li>
-            <li>Conversão por empreendimento;</li>
-            <li>Origem dos leads (portal, anúncios, WhatsApp);</li>
-            <li>Tempo médio entre primeiro contato e venda.</li>
-          </ul>
+        <section className="rounded-2xl border border-gray-200 bg-white p-6 text-sm text-gray-700">
+          Em breve: relatórios de leads, funil e desempenho de lançamentos.
         </section>
       )}
     </main>
   );
 }
+
+const NewProjectForm: React.FC = () => {
+  // Este formulário ainda não persiste em banco.
+  // Serve como rascunho alinhado ao modelo oficial EasyLar, já pensando em Supabase.
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    alert(
+      "Rascunho de empreendimento salvo localmente.\nA persistência real será adicionada após integração com o banco de dados (Supabase)."
+    );
+  };
+
+  return (
+    <section className="rounded-2xl border border-gray-200 bg-white p-6 text-sm text-gray-800">
+      <h2 className="mb-4 text-base font-semibold text-gray-900">
+        Novo empreendimento
+      </h2>
+      <p className="mb-4 text-xs text-gray-500">
+        Este formulário gera um rascunho completo do empreendimento alinhado ao
+        modelo oficial do EasyLar. Em uma próxima etapa, será integrado ao
+        Supabase/banco de dados.
+      </p>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div>
+            <label className="block text-xs font-semibold text-gray-700">
+              Nome do empreendimento
+            </label>
+            <input
+              type="text"
+              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-700">
+              Slug (URL)
+            </label>
+            <input
+              type="text"
+              placeholder="ex.: azul-e-verde"
+              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-700">
+              Cidade
+            </label>
+            <input
+              type="text"
+              defaultValue="Belo Horizonte - MG"
+              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-700">
+              Bairro
+            </label>
+            <input
+              type="text"
+              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-700">
+              Data de abertura de vendas
+            </label>
+            <input
+              type="text"
+              placeholder="dd/mm/aaaa"
+              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-700">
+              Previsão de entrega
+            </label>
+            <input
+              type="text"
+              placeholder="dd/mm/aaaa"
+              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-700">
+              Preço a partir de (R$)
+            </label>
+            <input
+              type="text"
+              placeholder="ex.: 420.000,00"
+              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-700">
+              Itens das áreas de lazer (separados por vírgula)
+            </label>
+            <input
+              type="text"
+              placeholder="Piscina, Salão de festas, Academia..."
+              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+
+        <div>
+          <span className="block text-xs font-semibold text-gray-700">
+            Tipologias
+          </span>
+          <div className="mt-1 flex flex-wrap gap-4 text-xs">
+            <label className="inline-flex items-center gap-1">
+              <input type="checkbox" />
+              <span>Studio</span>
+            </label>
+            <label className="inline-flex items-center gap-1">
+              <input type="checkbox" />
+              <span>1 quarto</span>
+            </label>
+            <label className="inline-flex items-center gap-1">
+              <input type="checkbox" />
+              <span>2 quartos</span>
+            </label>
+            <label className="inline-flex items-center gap-1">
+              <input type="checkbox" />
+              <span>3 quartos</span>
+            </label>
+            <label className="inline-flex items-center gap-1">
+              <input type="checkbox" />
+              <span>Cobertura</span>
+            </label>
+            <label className="inline-flex items-center gap-1">
+              <input type="checkbox" />
+              <span>Área privativa</span>
+            </label>
+          </div>
+        </div>
+
+        <div>
+          <span className="block text-xs font-semibold text-gray-700">
+            Vagas
+          </span>
+          <div className="mt-1 flex flex-wrap gap-4 text-xs">
+            <label className="inline-flex items-center gap-1">
+              <input type="checkbox" />
+              <span>Sem vaga</span>
+            </label>
+            <label className="inline-flex items-center gap-1">
+              <input type="checkbox" />
+              <span>1 vaga</span>
+            </label>
+            <label className="inline-flex items-center gap-1">
+              <input type="checkbox" />
+              <span>2 vagas</span>
+            </label>
+            <label className="inline-flex items-center gap-1">
+              <input type="checkbox" />
+              <span>Vaga avulsa</span>
+            </label>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div>
+            <label className="block text-xs font-semibold text-gray-700">
+              Imagem principal (thumb) – caminho em /public
+            </label>
+            <input
+              type="text"
+              placeholder="/empreendimentos/slug/thumb.jpg"
+              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-700">
+              Fachada atual (opcional) – caminho em /public
+            </label>
+            <input
+              type="text"
+              placeholder="/empreendimentos/slug/fachada_atual.jpg"
+              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-700">
+              Imagem de implantação – caminho em /public
+            </label>
+            <input
+              type="text"
+              placeholder="/empreendimentos/slug/implantacao.png"
+              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-700">
+              Imagens de lazer (URLs ou caminhos, separados por vírgula)
+            </label>
+            <input
+              type="text"
+              placeholder="/empreendimentos/slug/lazer1.png, /empreendimentos/slug/lazer2.png"
+              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-700">
+              Imagens de plantas (URLs ou caminhos, separados por vírgula)
+            </label>
+            <input
+              type="text"
+              placeholder="/empreendimentos/slug/planta1.png, /empreendimentos/slug/planta2.png"
+              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+
+        <p className="mt-4 text-xs text-gray-500">
+          Obs.: a edição e exclusão reais de empreendimentos serão ativadas
+          após integração com o banco (Supabase). Por enquanto, este formulário
+          funciona como rascunho local.
+        </p>
+
+        <div className="mt-4 flex justify-end">
+          <button
+            type="submit"
+            className="rounded-md bg-blue-600 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-500"
+          >
+            Salvar rascunho
+          </button>
+        </div>
+      </form>
+    </section>
+  );
+};
