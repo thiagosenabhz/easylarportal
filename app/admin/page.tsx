@@ -1,6 +1,5 @@
 "use client";
 
-import "./globals.css";
 import type { ReactNode } from "react";
 import { useState, FormEvent } from "react";
 import FloatingWhatsApp from "@/app/components/FloatingWhatsApp";
