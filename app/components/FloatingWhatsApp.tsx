@@ -43,7 +43,6 @@ export default function FloatingWhatsApp({
       `Finalidade: ${purposeLabel}`,
       data.email ? `E-mail: ${data.email}` : "",
       data.phone ? `Telefone: ${data.phone}` : "",
-      data.notes ? "",  # quebra de linha antes das observações
       data.notes ? `Observações: ${data.notes}` : "",
     ]
       .filter(Boolean)
