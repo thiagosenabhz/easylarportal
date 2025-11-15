@@ -1,44 +1,71 @@
-'use client';
-import React from 'react';
-import dynamic from 'next/dynamic';
-import { useLang } from '@/app/components/lang/LanguageProvider';
+"use client";
 
-const AdminLogin = dynamic(() => import('@/app/components/admin/AdminLogin'), { ssr: false, loading: () => null });
+import Link from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
+import React from "react";
 
-export default function Header() {
-  const { lang, setLang, t } = useLang();
-  const [openAdmin, setOpenAdmin] = React.useState(false);
+export const Header: React.FC = () => {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const view = searchParams.get("view");
+
+  const isHome = pathname === "/";
+  const isLaunchView = isHome && view === "launch";
+  const isStockView = isHome && view === "stock";
 
   return (
-    <header className="bg-brandBlue text-white sticky top-0 z-40">
-      <div className="mx-auto max-w-6xl px-4 py-3 flex items-center gap-4 justify-between">
-        <a href="/" className="font-semibold text-2xl">EasyLar</a>
-
-        <nav className="hidden md:flex items-center gap-6">
-          <a href="/search" className="hover:underline">{t('search')}</a>
-          <a href="/#pre" className="hover:underline">{t('preOpening')}</a>
-          <a href="/#opps" className="hover:underline">{t('opportunities')}</a>
-        </nav>
-
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setOpenAdmin(true)}
-            className="bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-lg"
-            aria-label={t('adminAccess')}
-          >
-            {t('adminAccess')}
-          </button>
-
-          <button
-            onClick={() => setLang(lang === 'pt' ? 'en' : 'pt')}
-            className="bg-white text-brandBlue font-semibold px-3 py-1.5 rounded-lg w-12 text-center"
-            aria-label={lang === 'pt' ? 'Switch to English' : 'Mudar para Português'}
-          >
-            {lang === 'pt' ? 'PT' : 'EN'}
-          </button>
+    <header className="bg-blue-700 text-white">
+      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 lg:px-6">
+        <div className="flex items-center gap-4">
+          <Link href="/" className="text-lg font-semibold tracking-tight">
+            EasyLar
+          </Link>
         </div>
+
+        <nav className="flex items-center gap-4 text-sm">
+          {/* REMOVIDO: "Buscar" */}
+
+          <Link
+            href="/?view=launch"
+            className={`rounded-full px-3 py-1 ${
+              isLaunchView
+                ? "bg-white text-blue-700 font-semibold"
+                : "hover:bg-blue-600"
+            }`}
+          >
+            Pré-abertura
+          </Link>
+
+          <Link
+            href="/?view=stock"
+            className={`rounded-full px-3 py-1 ${
+              isStockView
+                ? "bg-white text-blue-700 font-semibold"
+                : "hover:bg-blue-600"
+            }`}
+          >
+            Oportunidades
+          </Link>
+
+          <Link
+            href="/admin"
+            className="rounded-md bg-blue-600 px-3 py-1 font-semibold hover:bg-blue-500"
+          >
+            Acesso do administrador
+          </Link>
+
+          {/* Botão PT/EN mantido, sem alterar a lógica atual de tradução global.
+             Patch dedicado de multilíngue virá depois. */}
+          <Link
+            href={pathname === "/" ? "/?lang=en" : `${pathname}?lang=en`}
+            className="rounded-md bg-white px-3 py-1 text-xs font-semibold text-blue-700 hover:bg-gray-100"
+          >
+            EN
+          </Link>
+        </nav>
       </div>
-      {openAdmin && <AdminLogin open={openAdmin} onClose={() => setOpenAdmin(false)} />}
     </header>
   );
-}
+};
+
+export default Header;
