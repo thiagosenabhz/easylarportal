@@ -1,116 +1,166 @@
-'use client';
-import React from 'react';
-import { useLang } from '@/app/components/lang/LanguageProvider';
+"use client";
 
-export default function LeadModal({
-  open,
-  onClose,
-  defaultMessage
-}: {
-  open: boolean;
+import React, { FormEvent, useState } from "react";
+
+type LeadPurpose = "moradia" | "investimento";
+
+export type LeadFormData = {
+  name: string;
+  phone: string;
+  email: string;
+  purpose: LeadPurpose;
+  notes: string;
+  consent: boolean;
+};
+
+type LeadModalProps = {
+  isOpen: boolean;
   onClose: () => void;
-  defaultMessage?: string;
-}) {
-  const { t } = useLang();
-  const [name, setName] = React.useState('');
-  const [phone, setPhone] = React.useState('');
-  const [email, setEmail] = React.useState('');
-  const [type, setType] = React.useState<'moradia' | 'investimento'>('moradia');
-  const [notes, setNotes] = React.useState('');
-  const [consent, setConsent] = React.useState(false);
+  onSubmit: (data: LeadFormData) => void;
+};
 
-  React.useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+const LeadModal: React.FC<LeadModalProps> = ({
+  isOpen,
+  onClose,
+  onSubmit,
+}) => {
+  const [purpose, setPurpose] = useState<LeadPurpose>("moradia");
+  const [consent, setConsent] = useState(false);
+
+  if (!isOpen) return null;
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+
+    const data: LeadFormData = {
+      name: String(formData.get("name") || ""),
+      phone: String(formData.get("phone") || ""),
+      email: String(formData.get("email") || ""),
+      purpose,
+      notes: String(formData.get("notes") || ""),
+      consent,
     };
-    if (open) window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [open, onClose]);
 
-  if (!open) return null;
+    onSubmit(data);
+  };
 
-  const canSend = name && phone && email && consent;
-
-  const onSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!canSend) return;
-    const msg = defaultMessage
-      ? defaultMessage
-      : `Olá, tenho interesse. Tipo: ${type}. ${notes ? `Obs: ${notes}` : ''}`;
-    const url = `https://wa.me/5531999999999?text=${encodeURIComponent(msg + `\nNome: ${name}\nTel: ${phone}\nEmail: ${email}`)}`;
-    window.open(url, '_blank');
-    onClose();
+  const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[999] p-4" role="dialog" aria-modal>
-      <form onSubmit={onSubmit} className="bg-white w-full max-w-2xl rounded-2xl p-6 space-y-4">
-        <div className="text-2xl font-semibold">{t('talkToConsultant')}</div>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+      onClick={handleOverlayClick}
+    >
+      <div className="w-full max-w-2xl rounded-xl bg-white p-6 shadow-xl">
+        <h2 className="mb-4 text-xl font-semibold text-gray-900">
+          Falar com consultor
+        </h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <input
-            autoComplete="name"
-            required
-            value={name}
-            onChange={e=>setName(e.target.value)}
-            placeholder={`${t('yourName')}*`}
-            className="border rounded-lg px-3 py-2"
-          />
-          <input
-            autoComplete="tel"
-            required
-            value={phone}
-            onChange={e=>setPhone(e.target.value)}
-            placeholder={`${t('phone')}*`}
-            className="border rounded-lg px-3 py-2"
-          />
-        </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Seu nome*
+              </label>
+              <input
+                name="name"
+                required
+                autoComplete="name"
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Telefone (DDD)*
+              </label>
+              <input
+                name="phone"
+                required
+                autoComplete="tel"
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+          </div>
 
-        <input
-          autoComplete="email"
-          required
-          value={email}
-          onChange={e=>setEmail(e.target.value)}
-          placeholder={`${t('email')}*`}
-          className="border rounded-lg px-3 py-2 w-full"
-        />
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              Email*
+            </label>
+            <input
+              name="email"
+              type="email"
+              required
+              autoComplete="email"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
 
-        <div className="flex items-center gap-6">
-          <label className="flex items-center gap-2">
-            <input type="radio" name="tipo" checked={type=='moradia'} onChange={()=>setType('moradia')} />
-            <span>{t('housing')}</span>
+          <div className="flex flex-wrap gap-6">
+            <label className="flex items-center gap-2 text-sm text-gray-700">
+              <input
+                type="radio"
+                name="purposeOption"
+                checked={purpose === "moradia"}
+                onChange={() => setPurpose("moradia")}
+              />
+              Moradia
+            </label>
+            <label className="flex items-center gap-2 text-sm text-gray-700">
+              <input
+                type="radio"
+                name="purposeOption"
+                checked={purpose === "investimento"}
+                onChange={() => setPurpose("investimento")}
+              />
+              Investimento
+            </label>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              Observações — Faça um breve relato da sua busca para
+              direcionarmos melhor seu atendimento.
+            </label>
+            <textarea
+              name="notes"
+              rows={4}
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+
+          <label className="flex items-center gap-2 text-xs text-gray-600">
+            <input
+              type="checkbox"
+              checked={consent}
+              onChange={(e) => setConsent(e.target.checked)}
+            />
+            Autorizo o contato por e-mail, WhatsApp e telefone conforme LGPD.
           </label>
-          <label className="flex items-center gap-2">
-            <input type="radio" name="tipo" checked={type=='investimento'} onChange={()=>setType('investimento')} />
-            <span>{t('investing')}</span>
-          </label>
-        </div>
 
-        <textarea
-          value={notes}
-          onChange={e=>setNotes(e.target.value)}
-          placeholder={`${t('notes')} — ${t('notesHint')}`}
-          className="border rounded-lg px-3 py-2 w-full h-28"
-        />
-
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)} />
-          <span>{t('lgpdConsent')}</span>
-        </label>
-
-        <div className="flex items-center justify-end gap-3 pt-2">
-          <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border">
-            {t('cancel')}
-          </button>
-          <button
-            type="submit"
-            disabled={!canSend}
-            className={`px-4 py-2 rounded-lg text-white ${canSend ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-gray-400 cursor-not-allowed'}`}
-          >
-            {t('sendByWhatsApp')}
-          </button>
-        </div>
-      </form>
+          <div className="mt-4 flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="rounded-md bg-[#25D366] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1ebe5a]"
+            >
+              Enviar pelo WhatsApp
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
-}
+};
+
+export default LeadModal;
