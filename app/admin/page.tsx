@@ -1,3 +1,11 @@
+"use client";
+
+import { useState } from "react";
+import NewProjectForm from "./NewProjectForm";
+import CRMBoard from "./CRMBoard";
+
+type Tab = "project" | "crm" | "reports";
+
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<Tab>("project");
 
@@ -19,6 +27,7 @@ export default function AdminPage() {
         >
           Novo Empreendimento
         </button>
+
         <button
           type="button"
           onClick={() => setActiveTab("crm")}
@@ -30,6 +39,7 @@ export default function AdminPage() {
         >
           CRM
         </button>
+
         <button
           type="button"
           onClick={() => setActiveTab("reports")}
