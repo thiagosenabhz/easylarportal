@@ -1,255 +1,35 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
-import { parseCurrencyBRL } from "@/app/utils/currency";
+type FloatingWhatsAppProps = {
+  onOpenLeadModal: () => void;
+};
 
-type Tab = "project" | "crm" | "reports";
-
-/* ========================
-   PÁGINA PRINCIPAL DO ADMIN
-   ======================== */
-
-export default function AdminPage() {
-  const [activeTab, setActiveTab] = useState<Tab>("project");
-
+export default function FloatingWhatsApp({
+  onOpenLeadModal,
+}: FloatingWhatsAppProps) {
   return (
-    <main className="mx-auto max-w-7xl px-4 py-6 lg:px-6">
-      <h1 className="mb-6 text-xl font-semibold text-gray-900">
-        Painel do Administrador
-      </h1>
-
-      {/* Abas */}
-      <div className="mb-6 flex gap-2">
-        <button
-          type="button"
-          onClick={() => setActiveTab("project")}
-          className={`rounded-full px-4 py-2 text-sm font-medium ${
-            activeTab === "project"
-              ? "bg-blue-600 text-white"
-              : "bg-gray-100 text-gray-700"
-          }`}
-        >
-          Novo Empreendimento
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab("crm")}
-          className={`rounded-full px-4 py-2 text-sm font-medium ${
-            activeTab === "crm"
-              ? "bg-blue-600 text-white"
-              : "bg-gray-100 text-gray-700"
-          }`}
-        >
-          CRM
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab("reports")}
-          className={`rounded-full px-4 py-2 text-sm font-medium ${
-            activeTab === "reports"
-              ? "bg-blue-600 text-white"
-              : "bg-gray-100 text-gray-700"
-          }`}
-        >
-          Relatórios
-        </button>
-      </div>
-
-      {activeTab === "project" && <NewProjectForm />}
-      {activeTab === "crm" && <CRMBoard />}
-      {activeTab === "reports" && (
-        <p className="text-sm text-gray-600">
-          Área de relatórios em desenvolvimento.
-        </p>
-      )}
-    </main>
-  );
-}
-
-/* ========================
-   FORMULÁRIO NOVO EMPREENDIMENTO
-   ======================== */
-
-function monthToDateString(monthValue: string): string {
-  // monthValue vem como "YYYY-MM" e convertemos para "YYYY-MM-01"
-  if (!monthValue) return "";
-  const [year, month] = monthValue.split("-");
-  if (!year || !month) return "";
-  return `${year}-${month}-01`;
-}
-
-function NewProjectForm() {
-  const [openingMonth, setOpeningMonth] = useState("");
-  const [deliveryMonth, setDeliveryMonth] = useState("");
-  const [priceInput, setPriceInput] = useState("");
-  const [priceNumeric, setPriceNumeric] = useState(0);
-
-  const handlePriceChange = (value: string) => {
-    const { raw, value: numeric } = parseCurrencyBRL(value);
-    setPriceInput(raw || "R$ 0,00");
-    setPriceNumeric(numeric);
-  };
-
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-
-    const openingDate = monthToDateString(
-      String(formData.get("openingMonth") || "")
-    );
-    const deliveryDate = monthToDateString(
-      String(formData.get("deliveryMonth") || "")
-    );
-
-    const priceFrom = Math.round(priceNumeric);
-
-    const payload = {
-      name: String(formData.get("name") || ""),
-      slug: String(formData.get("slug") || ""),
-      city: String(formData.get("city") || ""),
-      neighborhood: String(formData.get("neighborhood") || ""),
-      openingDate,
-      deliveryDate,
-      priceFrom,
-      amenities: String(formData.get("amenities") || ""),
-      // Aqui você pode adicionar os demais campos (tipologias, vagas, imagens etc.)
-    };
-
-    console.log("Novo empreendimento (rascunho):", payload);
-    alert("Rascunho de empreendimento gerado (veja o console do navegador).");
-  };
-
-  return (
-    <section className="rounded-xl bg-white p-6 shadow-sm">
-      <h2 className="mb-4 text-lg font-semibold text-gray-900">
-        Novo empreendimento
-      </h2>
-      <p className="mb-6 text-sm text-gray-600">
-        Este formulário gera um rascunho completo do empreendimento alinhado ao
-        modelo oficial do EasyLar. Em uma próxima etapa, será integrado ao
-        Supabase/banco de dados.
-      </p>
-
-      <form onSubmit={handleSubmit} className="space-y-5">
-        <div className="grid gap-4 md:grid-cols-2">
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">
-              Nome do empreendimento
-            </label>
-            <input
-              name="name"
-              required
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">
-              Slug (URL)
-            </label>
-            <input
-              name="slug"
-              required
-              placeholder="ex.: azul-e-verde"
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-            />
-          </div>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-2">
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">
-              Cidade
-            </label>
-            <input
-              name="city"
-              defaultValue="Belo Horizonte - MG"
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">
-              Bairro
-            </label>
-            <input
-              name="neighborhood"
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-            />
-          </div>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-2">
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">
-              Data de abertura de vendas (mês/ano)
-            </label>
-            <input
-              type="month"
-              name="openingMonth"
-              value={openingMonth}
-              onChange={(e) => setOpeningMonth(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">
-              Previsão de entrega (mês/ano)
-            </label>
-            <input
-              type="month"
-              name="deliveryMonth"
-              value={deliveryMonth}
-              onChange={(e) => setDeliveryMonth(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">
-            Preço a partir de (R$)
-          </label>
-          <input
-            name="priceFromMasked"
-            value={priceInput || "R$ 0,00"}
-            onChange={(e) => handlePriceChange(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-          />
-        </div>
-
-        {/* Campos adicionais (tipologias, vagas, imagens, implantação, lazer etc.)
-            podem continuar logo abaixo, seguindo o mesmo padrão de inputs. */}
-
-        <p className="pt-2 text-xs text-gray-500">
-          Obs.: a edição e exclusão reais de empreendimentos serão ativadas após
-          integração com o banco (Supabase). Por enquanto, este formulário
-          funciona como rascunho local.
-        </p>
-
-        <div className="mt-4 flex justify-end">
-          <button
-            type="submit"
-            className="rounded-md bg-blue-600 px-6 py-2 text-sm font-semibold text-white hover:bg-blue-500"
-          >
-            Salvar rascunho
-          </button>
-        </div>
-      </form>
-    </section>
-  );
-}
-
-/* ========================
-   CRM (por enquanto simples)
-   ======================== */
-
-function CRMBoard() {
-  return (
-    <section className="rounded-xl bg-white p-6 shadow-sm">
-      <h2 className="mb-4 text-lg font-semibold text-gray-900">CRM</h2>
-      <p className="text-sm text-gray-600">
-        Kanban e automações do CRM serão reintegrados aqui. Use esta área
-        apenas como referência visual por enquanto.
-      </p>
-    </section>
+    <button
+      type="button"
+      aria-label="Falar com consultor pelo WhatsApp"
+      onClick={onOpenLeadModal}
+      className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#25D366] text-white shadow-lg transition hover:bg-[#1ebe5b] focus:outline-none focus:ring-2 focus:ring-[#25D366]/60 focus:ring-offset-2 focus:ring-offset-transparent"
+    >
+      {/* Ícone clássico do WhatsApp, vetorizado */}
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 32 32"
+        aria-hidden="true"
+        className="h-7 w-7"
+      >
+        <path
+          d="M16 3C9.374 3 4 8.373 4 15c0 2.362.708 4.558 1.926 6.395L4 29l7.828-1.89A11.88 11.88 0 0 0 16 27c6.627 0 12-5.373 12-12S22.627 3 16 3Z"
+          fill="currentColor"
+        />
+        <path
+          d="M13.07 10.36c-.26-.582-.535-.595-.784-.605-.203-.009-.435-.009-.667-.009s-.613.088-.935.435c-.322.347-1.23 1.201-1.23 2.93 0 1.729 1.26 3.4 1.435 3.637.177.237 2.425 3.878 5.983 5.28 2.961 1.168 3.563.935 4.203.876.64-.06 2.07-.847 2.363-1.665.293-.818.293-1.518.205-1.665-.088-.146-.322-.234-.673-.41-.351-.176-2.07-1.02-2.39-1.137-.32-.118-.553-.177-.785.177-.233.353-.902 1.137-1.106 1.37-.204.234-.409.264-.76.088-.351-.176-1.484-.546-2.829-1.74-1.046-.933-1.751-2.086-1.956-2.44-.204-.353-.022-.544.154-.72.158-.157.351-.41.526-.615.176-.205.234-.353.351-.586.117-.234.058-.44-.03-.616-.088-.175-.77-1.914-1.083-2.607Z"
+          fill="#fff"
+        />
+      </svg>
+    </button>
   );
 }
