@@ -26,8 +26,13 @@ export default function FloatingWhatsApp({
   };
 
   const handleLeadSubmit = (data: LeadFormData) => {
+    // Converte o propósito para string para evitar conflito de tipos com o LeadPurpose
+    const purpose = String((data as any).purpose || "");
     const purposeLabel =
-      data.purpose === "investment" ? "Investimento" : "Moradia";
+      purpose.toLowerCase() === "investment" ||
+      purpose.toLowerCase() === "investimento"
+        ? "Investimento"
+        : "Moradia";
 
     const lines = [
       "Olá, vim pelo site EasyLar.",
@@ -42,7 +47,7 @@ export default function FloatingWhatsApp({
 
     const message = encodeURIComponent(lines.join("\n"));
 
-    // Número que você já usou antes no link de WhatsApp
+    // Número de WhatsApp (mantive o mesmo padrão que você já usava)
     const whatsappNumber = "5531996090508";
 
     const url = `https://wa.me/${whatsappNumber}?text=${message}`;
