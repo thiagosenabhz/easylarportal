@@ -1,17 +1,26 @@
 "use client";
 
 type FloatingWhatsAppProps = {
-  onOpenLeadModal: () => void;
+  // Agora OPCIONAL, para não quebrar usos antigos como <FloatingWhatsApp />
+  onOpenLeadModal?: () => void;
 };
 
 export default function FloatingWhatsApp({
   onOpenLeadModal,
 }: FloatingWhatsAppProps) {
+  const handleClick = () => {
+    if (onOpenLeadModal) {
+      onOpenLeadModal();
+    }
+    // Se não tiver onOpenLeadModal, não faz nada por enquanto.
+    // Depois a gente pode plugar o LeadModal global nessa página também.
+  };
+
   return (
     <button
       type="button"
       aria-label="Falar com consultor pelo WhatsApp"
-      onClick={onOpenLeadModal}
+      onClick={handleClick}
       className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#25D366] text-white shadow-lg transition hover:bg-[#1ebe5b] focus:outline-none focus:ring-2 focus:ring-[#25D366]/60 focus:ring-offset-2 focus:ring-offset-transparent"
     >
       {/* Ícone clássico do WhatsApp, vetorizado */}
