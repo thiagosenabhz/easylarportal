@@ -1,442 +1,248 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import { useState, FormEvent } from "react";
+import CRMBoard from "@/app/components/admin/CRMBoard";
+import { parseCurrencyBRL } from "@/app/utils/currency";
 
-type LeadStage =
-  | "novo"
-  | "tentativa"
-  | "contato"
-  | "visita_agendada"
-  | "visita_realizada"
-  | "venda"
-  | "desistencia";
+type Tab = "project" | "crm" | "reports";
 
-export type Lead = {
-  id: string;
-  name: string;
-  phone: string;
-  email: string;
-  interest: string;
-  purpose: "moradia" | "investimento";
-  notes: string;
-  stage: LeadStage;
-};
-
-const STAGE_LABELS: Record<LeadStage, string> = {
-  novo: "Novo contato",
-  tentativa: "Tentativa de contato",
-  contato: "Contato realizado",
-  visita_agendada: "Visita agendada",
-  visita_realizada: "Visita realizada",
-  venda: "Venda",
-  desistencia: "Desistência"
-};
-
-type ColumnProps = {
-  stage: LeadStage;
-  leads: Lead[];
-  onDropLead: (leadId: string, targetStage: LeadStage) => void;
-  onDeleteLead: (leadId: string) => void;
-};
-
-const KanbanColumn: React.FC<ColumnProps> = ({
-  stage,
-  leads,
-  onDropLead,
-  onDeleteLead
-}) => {
-  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-  };
-
-  const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    const leadId = event.dataTransfer.getData("text/plain");
-    if (leadId) {
-      onDropLead(leadId, stage);
-    }
-  };
+/**
+ * Painel do Administrador
+ * - Aba "Novo Empreendimento": formulário de rascunho
+ * - Aba "CRM": Kanban completo (CRMBoard)
+ * - Aba "Relatórios": placeholder por enquanto
+ *
+ * OBS: O botão/flutuante de WhatsApp é renderizado globalmente via layout
+ * e já está oculto automaticamente em /admin, então nada de Whats aqui.
+ */
+export default function AdminPage() {
+  const [activeTab, setActiveTab] = useState<Tab>("project");
 
   return (
-    <div
-      className="flex min-h-[220px] flex-1 flex-col rounded-xl border border-gray-200 bg-gray-50 p-3"
-      onDragOver={handleDragOver}
-      onDrop={handleDrop}
-    >
-      <h3 className="mb-2 text-xs font-semibold uppercase text-gray-600">
-        {STAGE_LABELS[stage]}
-      </h3>
-      <div className="flex flex-1 flex-col gap-2">
-        {leads.map((lead) => (
-          <article
-            key={lead.id}
-            className="cursor-grab rounded-lg border border-gray-200 bg-white p-3 text-xs shadow-sm active:cursor-grabbing"
-            draggable
-            onDragStart={(event) => {
-              event.dataTransfer.setData("text/plain", lead.id);
-              event.dataTransfer.effectAllowed = "move";
-            }}
-          >
-            <div className="mb-1 flex items-center justify-between">
-              <strong className="text-[11px] font-semibold text-gray-900">
-                {lead.name}
-              </strong>
-              <button
-                type="button"
-                onClick={() => onDeleteLead(lead.id)}
-                className="text-[10px] text-red-500 hover:text-red-600"
-              >
-                Excluir
-              </button>
-            </div>
-            <div className="text-[11px] text-gray-700">
-              <div>{lead.phone}</div>
-              <div>{lead.email}</div>
-              <div className="mt-1 text-[10px] text-gray-500">
-                {lead.interest}
-              </div>
-            </div>
-            <div className="mt-1 text-[10px] text-gray-500">
-              Finalidade:{" "}
-              {lead.purpose === "moradia" ? "Moradia" : "Investimento"}
-            </div>
-          </article>
-        ))}
-      </div>
-    </div>
-  );
-};
+    <main className="mx-auto max-w-7xl px-4 py-6 lg:px-6">
+      <h1 className="mb-6 text-xl font-semibold text-gray-900">
+        Painel do Administrador
+      </h1>
 
-type CRMBoardProps = {
-  initialLeads?: Lead[];
-};
-
-export const CRMBoard: React.FC<CRMBoardProps> = ({ initialLeads = [] }) => {
-  const [leads, setLeads] = useState<Lead[]>(initialLeads);
-  const [search, setSearch] = useState("");
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [leadToDelete, setLeadToDelete] = useState<Lead | null>(null);
-
-  const filteredLeads = useMemo(() => {
-    if (!search.trim()) return leads;
-
-    const term = search.toLowerCase();
-    return leads.filter(
-      (lead) =>
-        lead.name.toLowerCase().includes(term) ||
-        lead.phone.toLowerCase().includes(term) ||
-        lead.email.toLowerCase().includes(term)
-    );
-  }, [leads, search]);
-
-  const leadsByStage = useMemo(() => {
-    const map: Record<LeadStage, Lead[]> = {
-      novo: [],
-      tentativa: [],
-      contato: [],
-      visita_agendada: [],
-      visita_realizada: [],
-      venda: [],
-      desistencia: []
-    };
-
-    filteredLeads.forEach((lead) => {
-      map[lead.stage].push(lead);
-    });
-
-    return map;
-  }, [filteredLeads]);
-
-  const handleDropLead = (leadId: string, stage: LeadStage) => {
-    setLeads((prev) =>
-      prev.map((lead) => (lead.id === leadId ? { ...lead, stage } : lead))
-    );
-  };
-
-  const handleDeleteLead = (leadId: string) => {
-    const lead = leads.find((l) => l.id === leadId) || null;
-    setLeadToDelete(lead);
-  };
-
-  const confirmDeleteLead = () => {
-    if (!leadToDelete) return;
-    setLeads((prev) => prev.filter((l) => l.id !== leadToDelete.id));
-    setLeadToDelete(null);
-  };
-
-  const handleAddLead = (lead: Omit<Lead, "id">) => {
-    const newLead: Lead = {
-      ...lead,
-      id: `${Date.now()}-${Math.random().toString(16).slice(2)}`
-    };
-    setLeads((prev) => [newLead, ...prev]);
-  };
-
-  return (
-    <section className="space-y-4">
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex-1">
-          <label className="block text-xs font-semibold text-gray-700">
-            Buscar lead
-          </label>
-          <input
-            type="text"
-            placeholder="Nome, telefone ou e-mail"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          />
-        </div>
-
+      <div className="mb-6 flex gap-2">
         <button
           type="button"
-          onClick={() => setIsModalOpen(true)}
-          className="mt-5 rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-500"
+          onClick={() => setActiveTab("project")}
+          className={`rounded-full px-4 py-2 text-sm font-medium ${
+            activeTab === "project"
+              ? "bg-blue-600 text-white"
+              : "bg-gray-100 text-gray-700"
+          }`}
         >
-          + Novo lead
+          Novo Empreendimento
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("crm")}
+          className={`rounded-full px-4 py-2 text-sm font-medium ${
+            activeTab === "crm"
+              ? "bg-blue-600 text-white"
+              : "bg-gray-100 text-gray-700"
+          }`}
+        >
+          CRM
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("reports")}
+          className={`rounded-full px-4 py-2 text-sm font-medium ${
+            activeTab === "reports"
+              ? "bg-blue-600 text-white"
+              : "bg-gray-100 text-gray-700"
+          }`}
+        >
+          Relatórios
         </button>
       </div>
 
-      <div className="flex gap-3">
-        {(
-          Object.keys(STAGE_LABELS) as Array<LeadStage>
-        ).map((stage: LeadStage) => (
-          <KanbanColumn
-            key={stage}
-            stage={stage}
-            leads={leadsByStage[stage]}
-            onDropLead={handleDropLead}
-            onDeleteLead={handleDeleteLead}
-          />
-        ))}
-      </div>
-
-      {isModalOpen && (
-        <LeadModalForm
-          onClose={() => setIsModalOpen(false)}
-          onSubmit={handleAddLead}
-        />
+      {activeTab === "project" && <NewProjectForm />}
+      {activeTab === "crm" && <CRMBoard />}
+      {activeTab === "reports" && (
+        <section className="rounded-xl bg-white p-6 shadow-sm">
+          <h2 className="mb-2 text-lg font-semibold text-gray-900">
+            Relatórios
+          </h2>
+          <p className="text-sm text-gray-600">
+            Área de relatórios em desenvolvimento. Aqui você verá métricas,
+            funil de conversão e performance de campanhas.
+          </p>
+        </section>
       )}
-
-      {leadToDelete && (
-        <ConfirmDeleteModal
-          lead={leadToDelete}
-          onCancel={() => setLeadToDelete(null)}
-          onConfirm={confirmDeleteLead}
-        />
-      )}
-    </section>
+    </main>
   );
-};
+}
 
-type LeadModalFormProps = {
-  onClose: () => void;
-  onSubmit: (lead: Omit<Lead, "id">) => void;
-};
+/* ========================
+   FORMULÁRIO NOVO EMPREENDIMENTO
+   ======================== */
 
-const LeadModalForm: React.FC<LeadModalFormProps> = ({ onClose, onSubmit }) => {
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
-  const [interest, setInterest] = useState("");
-  const [purpose, setPurpose] = useState<"moradia" | "investimento">("moradia");
-  const [notes, setNotes] = useState("");
+function monthToDateString(monthValue: string): string {
+  // monthValue vem como "YYYY-MM" e convertemos para "YYYY-MM-01"
+  if (!monthValue) return "";
+  const [year, month] = monthValue.split("-");
+  if (!year || !month) return "";
+  return `${year}-${month}-01`;
+}
 
-  React.useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+function NewProjectForm() {
+  const [openingMonth, setOpeningMonth] = useState("");
+  const [deliveryMonth, setDeliveryMonth] = useState("");
+  const [priceInput, setPriceInput] = useState("");
+  const [priceNumeric, setPriceNumeric] = useState(0);
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handlePriceChange = (value: string) => {
+    const { raw, value: numeric } = parseCurrencyBRL(value);
+    setPriceInput(raw);
+    setPriceNumeric(numeric);
+  };
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const formData = new FormData(event.currentTarget);
 
-    onSubmit({
-      name,
-      phone,
-      email,
-      interest,
-      purpose,
-      notes,
-      stage: "novo"
-    });
+    const openingDate = monthToDateString(
+      String(formData.get("openingMonth") || "")
+    );
+    const deliveryDate = monthToDateString(
+      String(formData.get("deliveryMonth") || "")
+    );
 
-    onClose();
+    // priceNumeric está em reais com centavos; se quiser sem centavos, use Math.round
+    const priceFrom = Math.round(priceNumeric);
+
+    const payload = {
+      name: String(formData.get("name") || ""),
+      slug: String(formData.get("slug") || ""),
+      city: String(formData.get("city") || ""),
+      neighborhood: String(formData.get("neighborhood") || ""),
+      openingDate,
+      deliveryDate,
+      priceFrom,
+      // demais campos podem ser adicionados aqui (tipologias, vagas, imagens etc.)
+    };
+
+    console.log("Novo empreendimento (rascunho):", payload);
+    alert("Rascunho de empreendimento gerado no console do navegador.");
   };
 
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40">
-      <div className="w-full max-w-xl rounded-2xl bg-white p-6 shadow-xl">
-        <h2 className="mb-4 text-base font-semibold text-gray-900">
-          Novo lead
-        </h2>
-        <form onSubmit={handleSubmit} className="space-y-3 text-sm">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div>
-              <label className="block text-xs font-semibold text-gray-700">
-                Nome
-              </label>
-              <input
-                type="text"
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
-            </div>
+    <section className="rounded-xl bg-white p-6 shadow-sm">
+      <h2 className="mb-4 text-lg font-semibold text-gray-900">
+        Novo empreendimento
+      </h2>
+      <p className="mb-6 text-sm text-gray-600">
+        Este formulário gera um rascunho completo do empreendimento alinhado ao
+        modelo oficial do EasyLar. Em uma próxima etapa, será integrado ao
+        Supabase/banco de dados.
+      </p>
 
-            <div>
-              <label className="block text-xs font-semibold text-gray-700">
-                Telefone
-              </label>
-              <input
-                type="tel"
-                required
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-gray-700">
-                E-mail
-              </label>
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-gray-700">
-                Tipologia de interesse
-              </label>
-              <input
-                type="text"
-                placeholder="2 quartos, cobertura, privativa..."
-                value={interest}
-                onChange={(e) => setInterest(e.target.value)}
-                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <span className="block text-xs font-semibold text-gray-700">
-              Finalidade
-            </span>
-            <div className="mt-1 flex gap-4 text-xs">
-              <label className="inline-flex items-center gap-1">
-                <input
-                  type="radio"
-                  name="purpose"
-                  value="moradia"
-                  checked={purpose === "moradia"}
-                  onChange={() => setPurpose("moradia")}
-                />
-                <span>Moradia</span>
-              </label>
-              <label className="inline-flex items-center gap-1">
-                <input
-                  type="radio"
-                  name="purpose"
-                  value="investimento"
-                  checked={purpose === "investimento"}
-                  onChange={() => setPurpose("investimento")}
-                />
-                <span>Investimento</span>
-              </label>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-gray-700">
-              Observações
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              Nome do empreendimento
             </label>
-            <textarea
-              rows={3}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            <input
+              name="name"
+              required
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             />
           </div>
-
-          <div className="mt-4 flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500"
-            >
-              Salvar lead
-            </button>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              Slug (URL)
+            </label>
+            <input
+              name="slug"
+              required
+              placeholder="ex.: azul-e-verde"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            />
           </div>
-        </form>
-      </div>
-    </div>
-  );
-};
+        </div>
 
-type ConfirmDeleteModalProps = {
-  lead: Lead;
-  onCancel: () => void;
-  onConfirm: () => void;
-};
+        <div className="grid gap-4 md:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              Cidade
+            </label>
+            <input
+              name="city"
+              defaultValue="Belo Horizonte - MG"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              Bairro
+            </label>
+            <input
+              name="neighborhood"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+        </div>
 
-const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
-  lead,
-  onCancel,
-  onConfirm
-}) => {
-  React.useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onCancel();
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onCancel]);
+        <div className="grid gap-4 md:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              Data de abertura de vendas (mês/ano)
+            </label>
+            <input
+              type="month"
+              name="openingMonth"
+              value={openingMonth}
+              onChange={(e) => setOpeningMonth(e.target.value)}
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              Previsão de entrega (mês/ano)
+            </label>
+            <input
+              type="month"
+              name="deliveryMonth"
+              value={deliveryMonth}
+              onChange={(e) => setDeliveryMonth(e.target.value)}
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+        </div>
 
-  return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40">
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-        <h2 className="mb-2 text-base font-semibold text-gray-900">
-          Confirmar exclusão
-        </h2>
-        <p className="mb-4 text-sm text-gray-700">
-          Tem certeza de que deseja excluir o lead{" "}
-          <span className="font-semibold">{lead.name}</span>? Essa ação não
-          poderá ser desfeita.
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700">
+            Preço a partir de (R$)
+          </label>
+          <input
+            name="priceFromMasked"
+            value={priceInput}
+            onChange={(e) => handlePriceChange(e.target.value)}
+            placeholder="R$ 350.000,00"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+          />
+        </div>
+
+        <p className="pt-2 text-xs text-gray-500">
+          Obs.: a edição e exclusão reais de empreendimentos serão ativadas após
+          integração com o banco (Supabase). Por enquanto, este formulário
+          funciona como rascunho local.
         </p>
-        <div className="flex justify-end gap-3">
+
+        <div className="mt-4 flex justify-end">
           <button
-            type="button"
-            onClick={onCancel}
-            className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            type="submit"
+            className="rounded-md bg-blue-600 px-6 py-2 text-sm font-semibold text-white hover:bg-blue-500"
           >
-            Cancelar
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            className="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500"
-          >
-            Excluir
+            Salvar rascunho
           </button>
         </div>
-      </div>
-    </div>
+      </form>
+    </section>
   );
-};
-
-export default CRMBoard;
+}
