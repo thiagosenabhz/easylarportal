@@ -1,192 +1,214 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { DragDropContext, Draggable, Droppable, DropResult } from "@hello-pangea/dnd";
 
-type StageId =
-  | "novo-contato"
-  | "tentativa"
-  | "contato"
-  | "visita-agendada"
-  | "visita-realizada"
-  | "venda"
-  | "desistencia";
+type LeadStageId =
+  | "new"
+  | "attempt"
+  | "contacted"
+  | "scheduled"
+  | "done"
+  | "lost";
 
 interface Lead {
   id: string;
   name: string;
-  email?: string;
-  phone?: string;
-  notes?: string;
-  stageId: StageId;
+  email: string;
+  phone: string;
+  notes: string;
+  stage: LeadStageId;
 }
 
-interface LeadFormData {
+const STAGES: { id: LeadStageId; title: string }[] = [
+  { id: "new",        title: "Novo contato" },
+  { id: "attempt",    title: "Tentativa de contato" },
+  { id: "contacted",  title: "Contato realizado" },
+  { id: "scheduled",  title: "Visita agendada" },
+  { id: "done",       title: "Visita realizada" },
+  { id: "lost",       title: "Desistência" },
+];
+
+type ModalMode = "create" | "edit";
+
+interface LeadFormState {
   name: string;
   email: string;
   phone: string;
   notes: string;
 }
 
-const STAGES: { id: StageId; title: string }[] = [
-  { id: "novo-contato", title: "Novo contato" },
-  { id: "tentativa", title: "Tentativa de contato" },
-  { id: "contato", title: "Contato realizado" },
-  { id: "visita-agendada", title: "Visita agendada" },
-  { id: "visita-realizada", title: "Visita realizada" },
-  { id: "venda", title: "Venda" },
-  { id: "desistencia", title: "Desistência" },
-];
-
-const emptyForm: LeadFormData = {
-  name: "",
-  email: "",
-  phone: "",
-  notes: "",
-};
+function createEmptyForm(): LeadFormState {
+  return {
+    name: "",
+    email: "",
+    phone: "",
+    notes: "",
+  };
+}
 
 export default function CRMBoard() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingLead, setEditingLead] = useState<Lead | null>(null);
-  const [form, setForm] = useState<LeadFormData>(emptyForm);
-  const [draggedLeadId, setDraggedLeadId] = useState<string | null>(null);
+  const [modalMode, setModalMode] = useState<ModalMode>("create");
+  const [activeLeadId, setActiveLeadId] = useState<string | null>(null);
+  const [form, setForm] = useState<LeadFormState>(createEmptyForm);
+
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Abre modal de novo contato
-  const handleOpenNewLead = () => {
-    setEditingLead(null);
-    setForm(emptyForm);
-    setIsModalOpen(true);
-  };
-
-  // Abre modal para editar / visualizar
-  const handleOpenEditLead = (lead: Lead) => {
-    setEditingLead(lead);
-    setForm({
-      name: lead.name ?? "",
-      email: lead.email ?? "",
-      phone: lead.phone ?? "",
-      notes: lead.notes ?? "",
-    });
-    setIsModalOpen(true);
-  };
-
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setEditingLead(null);
-    setForm(emptyForm);
-  };
+  const activeLead = useMemo(
+    () => leads.find((lead) => lead.id === activeLeadId) ?? null,
+    [leads, activeLeadId]
+  );
 
   // Fecha modal com ESC
   useEffect(() => {
     if (!isModalOpen) return;
 
-    const onKeyDown = (event: KeyboardEvent) => {
+    const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
-        closeModal();
+        handleCloseModal();
       }
     };
 
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isModalOpen]);
 
-  const handleChangeForm = (field: keyof LeadFormData, value: string) => {
+  const handleOpenCreateModal = () => {
+    setModalMode("create");
+    setActiveLeadId(null);
+    setForm(createEmptyForm());
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEditModal = (lead: Lead) => {
+    setModalMode("edit");
+    setActiveLeadId(lead.id);
+    setForm({
+      name: lead.name,
+      email: lead.email,
+      phone: lead.phone,
+      notes: lead.notes,
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+  };
+
+  const handleFormChange = (field: keyof LeadFormState, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleSaveLead = () => {
-    if (!form.name.trim()) {
-      alert("Preencha pelo menos o nome do contato.");
+    if (!form.name.trim() || !form.phone.trim()) {
+      alert("Preencha pelo menos nome e telefone para salvar o contato.");
       return;
     }
 
-    if (editingLead) {
-      // edição
+    if (modalMode === "create") {
+      const newLead: Lead = {
+        id: crypto.randomUUID(),
+        name: form.name.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim(),
+        notes: form.notes.trim(),
+        stage: "new",
+      };
+      setLeads((prev) => [...prev, newLead]);
+    } else if (modalMode === "edit" && activeLead) {
       setLeads((prev) =>
         prev.map((lead) =>
-          lead.id === editingLead.id
+          lead.id === activeLead.id
             ? {
                 ...lead,
                 name: form.name.trim(),
-                email: form.email.trim() || undefined,
-                phone: form.phone.trim() || undefined,
-                notes: form.notes.trim() || undefined,
+                email: form.email.trim(),
+                phone: form.phone.trim(),
+                notes: form.notes.trim(),
               }
             : lead
         )
       );
-    } else {
-      // criação
-      const newLead: Lead = {
-        id: `lead-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-        name: form.name.trim(),
-        email: form.email.trim() || undefined,
-        phone: form.phone.trim() || undefined,
-        notes: form.notes.trim() || undefined,
-        stageId: "novo-contato",
-      };
-      setLeads((prev) => [newLead, ...prev]);
     }
 
-    closeModal();
+    setIsModalOpen(false);
   };
 
   const handleDeleteLead = () => {
-    if (!editingLead) return;
-
+    if (!activeLead) return;
     const confirmed = window.confirm(
-      "Tem certeza que deseja excluir este contato?"
+      "Tem certeza que deseja excluir este contato? Essa ação não pode ser desfeita."
     );
     if (!confirmed) return;
 
-    setLeads((prev) => prev.filter((lead) => lead.id !== editingLead.id));
-    closeModal();
+    setLeads((prev) => prev.filter((lead) => lead.id !== activeLead.id));
+    setIsModalOpen(false);
   };
 
-  // Drag and drop
-  const handleDragStart = (leadId: string) => {
-    setDraggedLeadId(leadId);
+  const handleDragEnd = (result: DropResult) => {
+    const { destination, source, draggableId } = result;
+
+    if (!destination) return;
+
+    if (
+      destination.droppableId === source.droppableId &&
+      destination.index === source.index
+    ) {
+      return;
+    }
+
+    setLeads((prev) => {
+      const current = Array.from(prev);
+      const leadIndex = current.findIndex((l) => l.id === draggableId);
+      if (leadIndex === -1) return prev;
+
+      const lead = current[leadIndex];
+      current.splice(leadIndex, 1);
+
+      const newStageId = destination.droppableId as LeadStageId;
+
+      // Recalcula índice considerando apenas leads da coluna de destino
+      const before = current.filter((l) => l.stage === newStageId);
+      const insertIndex = current.findIndex((l) => {
+        if (l.stage !== newStageId) return false;
+        const positionAmongStage = before.indexOf(l);
+        return positionAmongStage == destination.index;
+      });
+
+      const updatedLead: Lead = { ...lead, stage: newStageId };
+
+      if (insertIndex == -1) {
+        current.push(updatedLead);
+      } else {
+        current.splice(insertIndex, 0, updatedLead);
+      }
+
+      return current;
+    });
   };
 
-  const handleDragOverColumn = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-  };
-
-  const handleDropOnColumn = (stageId: StageId) => {
-    if (!draggedLeadId) return;
-    setLeads((prev) =>
-      prev.map((lead) =>
-        lead.id === draggedLeadId ? { ...lead, stageId } : lead
-      )
-    );
-    setDraggedLeadId(null);
-  };
-
-  // Exportar contatos (Nome + Telefone) em CSV abrível no Excel
-  const handleExportToExcel = () => {
-    if (leads.length === 0) {
+  // Exporta todos os contatos (Nome + Telefone)
+  const handleExportCsv = () => {
+    if (!leads.length) {
       alert("Não há contatos para exportar.");
       return;
     }
 
-    const header = ["Nome", "Telefone"];
-    const rows = leads.map((lead) => [lead.name || "", lead.phone || ""]);
-
-    const escapeCell = (value: string) => `"${value.replace(/"/g, '""')}"`;
-
-    const csvLines = [
-      header.map(escapeCell).join(";"),
-      ...rows.map((row) => row.map(escapeCell).join(";")),
-    ];
-
-    const csvContent = csvLines.join("\n");
-    const blob = new Blob([csvContent], {
-      type: "text/csv;charset=utf-8;",
+    const header = "Nome;Telefone";
+    const rows = leads.map((lead) => {
+      const safeName = (lead.name || "").replace(/;/g, ",");
+      const safePhone = (lead.phone || "").replace(/;/g, ",");
+      return `${safeName};${safePhone}`;
     });
 
+    const csvContent = [header, ...rows].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
+
     const link = document.createElement("a");
     link.href = url;
     link.download = "contatos_easylar.csv";
@@ -196,335 +218,299 @@ export default function CRMBoard() {
     URL.revokeObjectURL(url);
   };
 
-  // Importar contatos (Nome + Telefone) via CSV
-  const handleClickImport = () => {
+  // Importa contatos a partir de CSV (Nome;Telefone ou Nome,Telefone)
+  const handleImportClick = () => {
     fileInputRef.current?.click();
   };
 
-  const handleFileChange = async (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    try {
-      const text = await file.text();
-      const importedLeads = parseContactsFromCSV(text);
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const text = String(reader.result ?? "");
+        const lines = text
+          .split(/\r?\n/)
+          .map((line) => line.trim())
+          .filter((line) => line.length > 0);
 
-      if (importedLeads.length === 0) {
-        alert(
-          "Nenhum contato válido foi encontrado. Verifique se o arquivo possui colunas Nome e Telefone."
-        );
-        return;
+        if (!lines.length) return;
+
+        const dataLines = lines.slice(1); // ignora cabeçalho
+        const imported: Lead[] = [];
+
+        for (const line of dataLines) {
+          const separator = line.includes(";") ? ";" : ",";
+          const [rawName = "", rawPhone = ""] = line.split(separator);
+
+          const name = rawName.trim();
+          const phone = rawPhone.trim();
+
+          if (!name || !phone) continue;
+
+          imported.push({
+            id: crypto.randomUUID(),
+            name,
+            phone,
+            email: "",
+            notes: "",
+            stage: "new",
+          });
+        }
+
+        if (!imported.length) {
+          alert("Nenhum contato válido encontrado no arquivo.");
+          return;
+        }
+
+        setLeads((prev) => [...prev, ...imported]);
+      } catch (error) {
+        console.error(error);
+        alert("Não foi possível importar o arquivo. Verifique o formato do CSV.");
+      } finally {
+        event.target.value = "";
       }
+    };
 
-      setLeads((prev) => [
-        ...importedLeads.map(
-          (c) =>
-            ({
-              id: `import-${Date.now()}-${Math.random()
-                .toString(16)
-                .slice(2)}`,
-              name: c.name,
-              phone: c.phone,
-              stageId: "novo-contato" as StageId,
-            } as Lead)
-        ),
-        ...prev,
-      ]);
-
-      alert(`Importamos ${importedLeads.length} contato(s).`);
-    } catch (error) {
-      console.error(error);
-      alert(
-        "Não foi possível importar o arquivo. Certifique-se de que ele está em formato CSV."
-      );
-    } finally {
-      event.target.value = "";
-    }
+    reader.readAsText(file, "utf-8");
   };
 
-  const leadsByStage = (stageId: StageId) =>
-    leads.filter((lead) => lead.stageId === stageId);
+  const leadsByStage = useMemo(() => {
+    const map: Record<LeadStageId, Lead[]> = {
+      new: [],
+      attempt: [],
+      contacted: [],
+      scheduled: [],
+      done: [],
+      lost: [],
+    };
+
+    for (const lead of leads) {
+      map[lead.stage].push(lead);
+    }
+
+    return map;
+  }, [leads]);
 
   return (
-    <section className="space-y-6">
-      <header className="flex flex-wrap items-center justify-between gap-4">
-        <h2 className="text-lg font-semibold text-gray-900">CRM</h2>
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold text-slate-900">CRM</h2>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={handleExportToExcel}
-            className="rounded-full border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+            onClick={handleExportCsv}
+            className="rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
           >
             Baixar contatos (Excel)
           </button>
 
           <button
             type="button"
-            onClick={handleClickImport}
-            className="rounded-full border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+            onClick={handleImportClick}
+            className="rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
           >
             Importar contatos (Excel)
           </button>
 
           <button
             type="button"
-            onClick={handleOpenNewLead}
-            className="rounded-full bg-emerald-500 px-5 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-emerald-600"
+            onClick={handleOpenCreateModal}
+            className="rounded-full bg-emerald-500 px-6 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-600"
           >
             Novo contato
           </button>
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".csv,text/csv"
-            className="hidden"
-            onChange={handleFileChange}
-          />
         </div>
-      </header>
 
-      <div className="overflow-x-auto pb-4">
-        <div className="flex min-w-max gap-4">
-          {STAGES.map((stage) => (
-            <div
-              key={stage.id}
-              className="flex h-[420px] w-64 flex-col rounded-2xl border border-gray-200 bg-white"
-              onDragOver={handleDragOverColumn}
-              onDrop={() => handleDropOnColumn(stage.id)}
-            >
-              <header className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
-                <h3 className="text-sm font-semibold text-gray-900">
-                  {stage.title}
-                </h3>
-                <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
-                  {leadsByStage(stage.id).length}
-                </span>
-              </header>
-
-              <div className="flex-1 space-y-2 overflow-y-auto px-3 py-3">
-                {leadsByStage(stage.id).length === 0 && (
-                  <p className="px-2 text-xs text-gray-400">
-                    Nenhum contato neste estágio.
-                  </p>
-                )}
-
-                {leadsByStage(stage.id).map((lead) => (
-                  <article
-                    key={lead.id}
-                    draggable
-                    onDragStart={() => handleDragStart(lead.id)}
-                    onClick={() => handleOpenEditLead(lead)}
-                    className="cursor-grab rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs shadow-sm transition hover:border-blue-400 hover:bg-blue-50"
-                  >
-                    <p className="font-semibold text-gray-900">
-                      {lead.name}
-                    </p>
-                    {lead.phone && (
-                      <p className="mt-0.5 text-[11px] text-gray-600">
-                        Tel: {lead.phone}
-                      </p>
-                    )}
-                    {lead.email && (
-                      <p className="mt-0.5 text-[11px] text-gray-500">
-                        {lead.email}
-                      </p>
-                    )}
-                    {lead.notes && (
-                      <p className="mt-1 line-clamp-2 text-[11px] text-gray-500">
-                        {lead.notes}
-                      </p>
-                    )}
-                  </article>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+          className="hidden"
+          onChange={handleFileChange}
+        />
       </div>
 
-      <p className="text-xs text-gray-400">
-        Próximo passo: ativar drag-and-drop persistente em banco de dados
-        (Supabase).
+      <DragDropContext onDragEnd={handleDragEnd}>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+          {STAGES.map((stage) => {
+            const stageLeads = leadsByStage[stage.id];
+
+            return (
+              <div
+                key={stage.id}
+                className="flex min-h-[260px] flex-col rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-100"
+              >
+                <div className="mb-2 flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-slate-900">
+                    {stage.title}
+                  </h3>
+                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+                    {stageLeads.length}
+                  </span>
+                </div>
+
+                <Droppable droppableId={stage.id}>
+                  {(provided, snapshot) => (
+                    <div
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      className={`flex flex-1 flex-col gap-3 rounded-xl border border-dashed border-slate-200 p-2 transition ${
+                        snapshot.isDraggingOver ? "bg-emerald-50" : "bg-slate-50/40"
+                      }`}
+                    >
+                      {stageLeads.length === 0 && (
+                        <p className="text-xs text-slate-400">
+                          Nenhum contato neste estágio.
+                        </p>
+                      )}
+
+                      {stageLeads.map((lead, index) => (
+                        <Draggable key={lead.id} draggableId={lead.id} index={index}>
+                          {(draggableProvided, draggableSnapshot) => (
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditModal(lead)}
+                              ref={draggableProvided.innerRef}
+                              {...draggableProvided.draggableProps}
+                              {...draggableProvided.dragHandleProps}
+                              className={`flex flex-col items-start rounded-xl border bg-white px-3 py-2 text-left text-xs shadow-sm transition ${
+                                draggableSnapshot.isDragging
+                                  ? "border-emerald-300 shadow-md"
+                                  : "border-slate-200 hover:border-emerald-300"
+                              }`}
+                            >
+                              <span className="mb-1 line-clamp-1 font-semibold text-slate-900">
+                                {lead.name || "Sem nome"}
+                              </span>
+                              {lead.phone && (
+                                <span className="text-[11px] text-slate-700">
+                                  Tel: {lead.phone}
+                                </span>
+                              )}
+                              {lead.email && (
+                                <span className="text-[11px] text-slate-500">
+                                  {lead.email}
+                                </span>
+                              )}
+                              {lead.notes && (
+                                <span className="mt-1 line-clamp-2 text-[11px] text-slate-500">
+                                  {lead.notes}
+                                </span>
+                              )}
+                            </button>
+                          )}
+                        </Draggable>
+                      ))}
+
+                      {provided.placeholder}
+                    </div>
+                  )}
+                </Droppable>
+              </div>
+            );
+          })}
+        </div>
+      </DragDropContext>
+
+      <p className="mt-2 text-xs text-slate-400">
+        Próximo passo: ativar drag-and-drop persistente em banco de dados (Supabase).
       </p>
 
       {isModalOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
-          onClick={closeModal}
-        >
-          <div
-            className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="text-base font-semibold text-gray-900">
-              {editingLead ? "Detalhes do contato" : "Novo contato"}
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            <h3 className="mb-4 text-lg font-semibold text-slate-900">
+              {modalMode === "create" ? "Novo contato" : "Editar contato"}
             </h3>
 
-            <div className="mt-4 space-y-3">
+            <div className="space-y-3">
               <div>
-                <label className="block text-xs font-medium text-gray-700">
+                <label className="mb-1 block text-xs font-medium text-slate-700">
                   Nome*
                 </label>
                 <input
                   type="text"
                   value={form.name}
-                  onChange={(e) =>
-                    handleChangeForm("name", e.target.value)
-                  }
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  placeholder="Nome completo do contato"
+                  onChange={(e) => handleFormChange("name", e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                 />
               </div>
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="block text-xs font-medium text-gray-700">
+                  <label className="mb-1 block text-xs font-medium text-slate-700">
                     E-mail
                   </label>
                   <input
                     type="email"
                     value={form.email}
-                    onChange={(e) =>
-                      handleChangeForm("email", e.target.value)
-                    }
-                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    placeholder="email@exemplo.com"
+                    onChange={(e) => handleFormChange("email", e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                   />
                 </div>
+
                 <div>
-                  <label className="block text-xs font-medium text-gray-700">
-                    Telefone (DDD)
+                  <label className="mb-1 block text-xs font-medium text-slate-700">
+                    Telefone*
                   </label>
                   <input
                     type="tel"
                     value={form.phone}
-                    onChange={(e) =>
-                      handleChangeForm("phone", e.target.value)
-                    }
-                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    placeholder="(31) 99999-9999"
+                    onChange={(e) => handleFormChange("phone", e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-700">
+                <label className="mb-1 block text-xs font-medium text-slate-700">
                   Observações
                 </label>
                 <textarea
-                  value={form.notes}
-                  onChange={(e) =>
-                    handleChangeForm("notes", e.target.value)
-                  }
                   rows={4}
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  placeholder="Histórico de atendimento, perfil, interesse, renda, etc."
+                  value={form.notes}
+                  onChange={(e) => handleFormChange("notes", e.target.value)}
+                  className="w-full resize-y rounded-xl border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                 />
               </div>
             </div>
 
-            <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-              {editingLead ? (
+            <div className="mt-5 flex flex-wrap justify-between gap-2">
+              <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={handleDeleteLead}
-                  className="text-sm font-medium text-red-600 hover:text-red-700"
+                  onClick={handleCloseModal}
+                  className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
                 >
-                  Excluir contato
+                  Cancelar (Esc)
                 </button>
-              ) : (
-                <span />
-              )}
 
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  className="rounded-full border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  Cancelar
-                </button>
                 <button
                   type="button"
                   onClick={handleSaveLead}
-                  className="rounded-full bg-blue-600 px-5 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                  className="rounded-xl bg-emerald-500 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-600"
                 >
-                  {editingLead ? "Salvar alterações" : "Salvar contato"}
+                  Salvar
                 </button>
               </div>
+
+              {modalMode === "edit" && (
+                <button
+                  type="button"
+                  onClick={handleDeleteLead}
+                  className="rounded-xl border border-red-200 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+                >
+                  Excluir contato
+                </button>
+              )}
             </div>
           </div>
         </div>
       )}
-    </section>
+    </div>
   );
-}
-
-// Utilitário simples para ler CSV com colunas Nome / Telefone
-function parseContactsFromCSV(text: string): { name: string; phone: string }[] {
-  const lines = text
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter((l) => l.length > 0);
-
-  if (lines.length <= 1) return [];
-
-  // Remove cabeçalho
-  const dataLines = lines.slice(1);
-
-  const results: { name: string; phone: string }[] = [];
-
-  for (const line of dataLines) {
-    if (!line) continue;
-
-    // Tenta separar por ";" e depois por ","
-    let parts = splitCsvLine(line, ";");
-    if (parts.length < 2) {
-      parts = splitCsvLine(line, ",");
-    }
-
-    const name = (parts[0] || "").trim();
-    const phone = (parts[1] || "").trim();
-
-    if (!name && !phone) continue;
-
-    results.push({ name: stripQuotes(name), phone: stripQuotes(phone) });
-  }
-
-  return results;
-}
-
-function splitCsvLine(line: string, delimiter: string): string[] {
-  const parts: string[] = [];
-  let current = "";
-  let insideQuotes = false;
-
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
-
-    if (char === '"') {
-      insideQuotes = !insideQuotes;
-      current += char;
-    } else if (char === delimiter && !insideQuotes) {
-      parts.push(current);
-      current = "";
-    } else {
-      current += char;
-    }
-  }
-
-  parts.push(current);
-  return parts;
-}
-
-function stripQuotes(value: string): string {
-  let v = value.trim();
-  if (v.startsWith('"') && v.endsWith('"')) {
-    v = v.slice(1, -1);
-  }
-  return v.replace(/""/g, '"').trim();
 }
