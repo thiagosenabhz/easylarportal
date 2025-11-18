@@ -1,285 +1,425 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type StageId =
-  | "novo"
-  | "tentativa"
-  | "contato"
-  | "visita_agendada"
-  | "visita_realizada"
+  | "novo-contato"
+  | "tentativa-contato"
+  | "contato-realizado"
+  | "visita-agendada"
+  | "visita-realizada"
   | "venda"
   | "desistencia";
 
-type Lead = {
+interface Stage {
+  id: StageId;
+  title: string;
+}
+
+interface Lead {
   id: string;
   name: string;
   email?: string;
   phone?: string;
   notes?: string;
-  stage: StageId;
-};
+  stageId: StageId;
+  createdAt: string;
+}
 
-const STAGES: { id: StageId; title: string }[] = [
-  { id: "novo", title: "Novo contato" },
-  { id: "tentativa", title: "Tentativa de contato" },
-  { id: "contato", title: "Contato realizado" },
-  { id: "visita_agendada", title: "Visita agendada" },
-  { id: "visita_realizada", title: "Visita realizada" },
+interface LeadFormValues {
+  name: string;
+  email: string;
+  phone: string;
+  notes: string;
+}
+
+const STAGES: Stage[] = [
+  { id: "novo-contato", title: "Novo contato" },
+  { id: "tentativa-contato", title: "Tentativa de contato" },
+  { id: "contato-realizado", title: "Contato realizado" },
+  { id: "visita-agendada", title: "Visita agendada" },
+  { id: "visita-realizada", title: "Visita realizada" },
   { id: "venda", title: "Venda" },
-  { id: "desistencia", title: "Desistência" }
+  { id: "desistencia", title: "Desistência" },
 ];
 
-const initialLeads: Lead[] = [
+const INITIAL_LEADS: Lead[] = [
   {
     id: "1",
-    name: "Novo Lead",
-    email: "",
-    stage: "novo"
+    name: "THIAGO PORCARO SENA",
+    email: "asdf@asdas",
+    phone: "34234",
+    notes: "",
+    stageId: "novo-contato",
+    createdAt: new Date().toISOString(),
   },
   {
     id: "2",
     name: "Novo Lead",
     email: "",
-    stage: "novo"
-  }
+    phone: "",
+    notes: "",
+    stageId: "novo-contato",
+    createdAt: new Date().toISOString(),
+  },
 ];
 
-type NewLeadFormState = {
-  name: string;
-  email: string;
-  phone: string;
-  notes: string;
-};
+interface LeadModalProps {
+  isOpen: boolean;
+  mode: "create" | "edit";
+  initialValues?: LeadFormValues;
+  onCancel: () => void;
+  onConfirm: (values: LeadFormValues) => void;
+  onDelete?: () => void;
+}
 
-const emptyForm: NewLeadFormState = {
-  name: "",
-  email: "",
-  phone: "",
-  notes: ""
-};
+function LeadModal({
+  isOpen,
+  mode,
+  initialValues,
+  onCancel,
+  onConfirm,
+  onDelete,
+}: LeadModalProps) {
+  const [values, setValues] = useState<LeadFormValues>({
+    name: "",
+    email: "",
+    phone: "",
+    notes: "",
+  });
 
-export default function CRMBoard() {
-  const [leads, setLeads] = useState<Lead[]>(initialLeads);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [form, setForm] = useState<NewLeadFormState>(emptyForm);
+  // Sincroniza valores quando abre/edita
+  useEffect(() => {
+    if (!isOpen) return;
+    setValues({
+      name: initialValues?.name ?? "",
+      email: initialValues?.email ?? "",
+      phone: initialValues?.phone ?? "",
+      notes: initialValues?.notes ?? "",
+    });
+  }, [isOpen, initialValues]);
 
-  const handleOpenModal = () => {
-    setForm(emptyForm);
-    setIsModalOpen(true);
-  };
+  // Fecha com ESC
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onCancel();
+      }
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [isOpen, onCancel]);
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-  };
+  if (!isOpen) return null;
 
-  const handleChangeField = (
-    field: keyof NewLeadFormState,
-    value: string
-  ) => {
-    setForm((prev) => ({
-      ...prev,
-      [field]: value
-    }));
-  };
+  const title = mode === "create" ? "Novo contato" : "Detalhes do contato";
+
+  const handleChange =
+    (field: keyof LeadFormValues) =>
+    (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      setValues((prev) => ({
+        ...prev,
+        [field]: event.target.value,
+      }));
+    };
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
-
-    if (!form.name.trim()) {
-      // Validação mínima: nome obrigatório
+    if (!values.name.trim()) {
+      alert("Preencha o nome do contato.");
       return;
     }
+    onConfirm(values);
+  };
 
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+      <div
+        className="absolute inset-0"
+        onClick={onCancel}
+        aria-hidden="true"
+      />
+      <div className="relative z-10 w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
+        <h2 className="mb-4 text-lg font-semibold text-gray-900">{title}</h2>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-gray-700">
+              Nome*
+            </label>
+            <input
+              type="text"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              value={values.name}
+              onChange={handleChange("name")}
+              placeholder="Nome completo do contato"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-gray-700">
+                E-mail
+              </label>
+              <input
+                type="email"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                value={values.email}
+                onChange={handleChange("email")}
+                placeholder="email@exemplo.com"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-gray-700">
+                Telefone (DDD)
+              </label>
+              <input
+                type="tel"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                value={values.phone}
+                onChange={handleChange("phone")}
+                placeholder="(31) 99999-9999"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-gray-700">
+              Observações
+            </label>
+            <textarea
+              className="min-h-[120px] w-full resize-y rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              value={values.notes}
+              onChange={handleChange("notes")}
+              placeholder="Resumo da necessidade, perfil, objeções, próximos passos..."
+            />
+          </div>
+
+          <div className="mt-4 flex flex-col gap-3 border-t border-gray-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
+            {mode === "edit" && onDelete && (
+              <button
+                type="button"
+                onClick={onDelete}
+                className="inline-flex items-center justify-center rounded-lg border border-red-500 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+              >
+                Excluir lead
+              </button>
+            )}
+
+            <div className="flex flex-1 justify-end gap-3">
+              <button
+                type="button"
+                onClick={onCancel}
+                className="inline-flex items-center justify-center rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              >
+                {mode === "create" ? "Salvar lead" : "Salvar alterações"}
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+export default function CRMBoard() {
+  const [leads, setLeads] = useState<Lead[]>(INITIAL_LEADS);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [editingLeadId, setEditingLeadId] = useState<string | null>(null);
+
+  const editingLead = useMemo(
+    () => leads.find((lead) => lead.id === editingLeadId),
+    [leads, editingLeadId]
+  );
+
+  const handleCreateLead = (values: LeadFormValues) => {
     const newLead: Lead = {
       id: String(Date.now()),
-      name: form.name.trim(),
-      email: form.email.trim() || undefined,
-      phone: form.phone.trim() || undefined,
-      notes: form.notes.trim() || undefined,
-      stage: "novo"
+      name: values.name.trim(),
+      email: values.email.trim(),
+      phone: values.phone.trim(),
+      notes: values.notes.trim(),
+      stageId: "novo-contato",
+      createdAt: new Date().toISOString(),
     };
 
     setLeads((prev) => [newLead, ...prev]);
-    setIsModalOpen(false);
-    setForm(emptyForm);
+    setIsCreateModalOpen(false);
   };
 
-  const leadsByStage = STAGES.reduce<Record<StageId, Lead[]>>(
-    (acc, stage) => {
-      acc[stage.id] = [];
-      return acc;
-    },
-    {} as Record<StageId, Lead[]>
-  );
+  const handleUpdateLead = (values: LeadFormValues) => {
+    if (!editingLeadId) return;
 
-  for (const lead of leads) {
-    leadsByStage[lead.stage].push(lead);
-  }
+    setLeads((prev) =>
+      prev.map((lead) =>
+        lead.id === editingLeadId
+          ? {
+              ...lead,
+              name: values.name.trim(),
+              email: values.email.trim(),
+              phone: values.phone.trim(),
+              notes: values.notes.trim(),
+            }
+          : lead
+      )
+    );
+    setEditingLeadId(null);
+  };
+
+  const handleDeleteLead = () => {
+    if (!editingLeadId) return;
+    const confirmDelete = window.confirm(
+      "Tem certeza que deseja excluir este lead? Essa ação não pode ser desfeita."
+    );
+    if (!confirmDelete) return;
+
+    setLeads((prev) => prev.filter((lead) => lead.id !== editingLeadId));
+    setEditingLeadId(null);
+  };
+
+  const handleDropOnStage = (stageId: StageId) => {
+    if (!draggingId) return;
+    setLeads((prev) =>
+      prev.map((lead) =>
+        lead.id === draggingId ? { ...lead, stageId } : lead
+      )
+    );
+    setDraggingId(null);
+  };
+
+  const groupedLeads = useMemo(() => {
+    const map: Record<StageId, Lead[]> = {
+      "novo-contato": [],
+      "tentativa-contato": [],
+      "contato-realizado": [],
+      "visita-agendada": [],
+      "visita-realizada": [],
+      venda: [],
+      desistencia: [],
+    };
+
+    for (const lead of leads) {
+      map[lead.stageId].push(lead);
+    }
+
+    return map;
+  }, [leads]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-gray-800">CRM</h2>
+    <section className="space-y-6">
+      <header className="flex items-center justify-between">
+        <h1 className="text-lg font-semibold text-gray-900">CRM</h1>
 
         <button
           type="button"
-          onClick={handleOpenModal}
-          className="rounded-full bg-emerald-500 px-5 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+          onClick={() => setIsCreateModalOpen(true)}
+          className="rounded-full bg-emerald-500 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600"
         >
           Novo contato
         </button>
-      </div>
+      </header>
 
       <div className="flex gap-4 overflow-x-auto pb-4">
-        {STAGES.map((stage) => (
-          <section
-            key={stage.id}
-            className="flex h-[420px] min-w-[220px] flex-col rounded-xl border border-gray-200 bg-white p-3 shadow-sm"
-          >
-            <h3 className="text-sm font-semibold text-gray-800">
-              {stage.title}
-            </h3>
+        {STAGES.map((stage) => {
+          const stageLeads = groupedLeads[stage.id];
 
-            <div className="mt-3 flex-1 space-y-3 overflow-y-auto">
-              {leadsByStage[stage.id].length === 0 && (
-                <p className="text-xs text-gray-400">
-                  Nenhum contato neste estágio.
-                </p>
-              )}
+          return (
+            <div
+              key={stage.id}
+              className="flex h-[420px] w-64 flex-shrink-0 flex-col rounded-2xl bg-white p-3 shadow-sm"
+              onDragOver={(event) => {
+                if (draggingId) {
+                  event.preventDefault();
+                }
+              }}
+              onDrop={() => handleDropOnStage(stage.id)}
+            >
+              <h2 className="mb-2 text-sm font-semibold text-gray-800">
+                {stage.title}
+              </h2>
 
-              {leadsByStage[stage.id].map((lead) => (
-                <article
-                  key={lead.id}
-                  className="rounded-lg border border-gray-200 bg-white p-3 text-xs shadow-sm"
-                >
-                  <p className="font-semibold text-gray-800">{lead.name}</p>
-                  {lead.email && (
-                    <p className="mt-1 text-gray-600">E-mail: {lead.email}</p>
-                  )}
-                  {lead.phone && (
-                    <p className="mt-0.5 text-gray-600">
-                      Telefone: {lead.phone}
+              <div className="flex-1 space-y-2 overflow-y-auto rounded-xl bg-gray-50 p-2 text-xs text-gray-500">
+                {stageLeads.length === 0 && (
+                  <p className="px-1 text-[11px] text-gray-400">
+                    Nenhum contato neste estágio.
+                  </p>
+                )}
+
+                {stageLeads.map((lead) => (
+                  <button
+                    key={lead.id}
+                    type="button"
+                    draggable
+                    onDragStart={() => setDraggingId(lead.id)}
+                    onDragEnd={() => setDraggingId(null)}
+                    onClick={() => setEditingLeadId(lead.id)}
+                    className="w-full cursor-grab rounded-xl border border-gray-200 bg-white px-3 py-2 text-left text-xs shadow-sm transition hover:border-blue-400 hover:bg-blue-50"
+                  >
+                    <p className="truncate text-[13px] font-semibold text-gray-900">
+                      {lead.name || "Sem nome"}
                     </p>
-                  )}
-                  {lead.notes && (
-                    <p className="mt-1 text-gray-500">{lead.notes}</p>
-                  )}
-                </article>
-              ))}
+                    {lead.email && (
+                      <p className="truncate text-[11px] text-gray-500">
+                        E-mail: {lead.email}
+                      </p>
+                    )}
+                    {lead.phone && (
+                      <p className="truncate text-[11px] text-gray-500">
+                        Telefone: {lead.phone}
+                      </p>
+                    )}
+                    {lead.notes && (
+                      <p className="mt-1 line-clamp-2 text-[11px] text-gray-400">
+                        {lead.notes}
+                      </p>
+                    )}
+                  </button>
+                ))}
+              </div>
             </div>
-          </section>
-        ))}
+          );
+        })}
       </div>
 
       <p className="text-xs text-gray-400">
-        Próximo passo: ativar drag-and-drop e persistir no Supabase.
+        Próximo passo: integrar com Supabase para salvar leads e movimentações
+        de forma permanente.
       </p>
 
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-            <h3 className="text-base font-semibold text-gray-900">
-              Novo contato
-            </h3>
+      {/* Modal de criação */}
+      <LeadModal
+        isOpen={isCreateModalOpen}
+        mode="create"
+        onCancel={() => setIsCreateModalOpen(false)}
+        onConfirm={handleCreateLead}
+      />
 
-            <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-              <div className="space-y-1">
-                <label
-                  htmlFor="lead-name"
-                  className="text-xs font-medium text-gray-700"
-                >
-                  Nome*
-                </label>
-                <input
-                  id="lead-name"
-                  type="text"
-                  required
-                  value={form.name}
-                  onChange={(e) => handleChangeField("name", e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                  placeholder="Nome do cliente"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="space-y-1">
-                  <label
-                    htmlFor="lead-email"
-                    className="text-xs font-medium text-gray-700"
-                  >
-                    E-mail
-                  </label>
-                  <input
-                    id="lead-email"
-                    type="email"
-                    value={form.email}
-                    onChange={(e) =>
-                      handleChangeField("email", e.target.value)
-                    }
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                    placeholder="cliente@email.com"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label
-                    htmlFor="lead-phone"
-                    className="text-xs font-medium text-gray-700"
-                  >
-                    Telefone (DDD)
-                  </label>
-                  <input
-                    id="lead-phone"
-                    type="tel"
-                    value={form.phone}
-                    onChange={(e) =>
-                      handleChangeField("phone", e.target.value)
-                    }
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                    placeholder="(31) 99999-9999"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label
-                  htmlFor="lead-notes"
-                  className="text-xs font-medium text-gray-700"
-                >
-                  Observações
-                </label>
-                <textarea
-                  id="lead-notes"
-                  rows={3}
-                  value={form.notes}
-                  onChange={(e) =>
-                    handleChangeField("notes", e.target.value)
-                  }
-                  className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                  placeholder="Resumo da demanda, interesse, renda, empreendimento etc."
-                />
-              </div>
-
-              <div className="mt-4 flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={handleCloseModal}
-                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-gray-300"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-1"
-                >
-                  Salvar contato
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-    </div>
+      {/* Modal de edição */}
+      <LeadModal
+        isOpen={Boolean(editingLead)}
+        mode="edit"
+        initialValues={
+          editingLead && {
+            name: editingLead.name ?? "",
+            email: editingLead.email ?? "",
+            phone: editingLead.phone ?? "",
+            notes: editingLead.notes ?? "",
+          }
+        }
+        onCancel={() => setEditingLeadId(null)}
+        onConfirm={handleUpdateLead}
+        onDelete={handleDeleteLead}
+      />
+    </section>
   );
 }
