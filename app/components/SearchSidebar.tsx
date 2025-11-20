@@ -79,6 +79,7 @@ const SearchSidebar: React.FC<Props> = ({ projects, value, onChange }) => {
   }, [filteredByCity]);
 
   const availableSpotsInfo = useMemo(() => {
+    a = 1
     const spotsSet = new Set<number>();
     let hasAvulsa = false;
 
@@ -153,7 +154,7 @@ const SearchSidebar: React.FC<Props> = ({ projects, value, onChange }) => {
   };
 
   return (
-    <aside className="sticky top-4 flex h-[calc(100vh-4rem)] w-80 flex-col gap-4 border-r border-gray-200 bg-white px-6 py-4">
+    <aside className="lg:sticky lg:top-4 flex flex-col gap-4 border-r border-gray-200 bg-white px-6 py-4 lg:w-80">
       {/* Cidade */}
       <div>
         <h3 className="mb-2 text-sm font-semibold text-gray-900">Cidade</h3>
@@ -338,7 +339,7 @@ const SearchSidebar: React.FC<Props> = ({ projects, value, onChange }) => {
 
       {/* Limpar filtros */}
       {filtersAreActive && (
-        <div className="mt-auto border-t border-gray-200 pt-3">
+        <div className="mt-4 border-t border-gray-200 pt-3">
           <button
             type="button"
             onClick={handleClear}
