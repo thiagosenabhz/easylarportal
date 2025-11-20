@@ -256,7 +256,7 @@ export default function HomePageClient() {
               onClick={() => setInfoTab("investor")}
               className={`rounded-full px-4 py-2 text-xs font-medium sm:text-sm ${
                 infoTab === "investor"
-                  ? "bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200"
+                  ? "bg-slate-900 text-white ring-1 ring-slate-900/10"
                   : "bg-slate-50 text-slate-700 hover:bg-slate-100"
               }`}
             >
