@@ -2,6 +2,7 @@
 
 import React, { useMemo } from "react";
 import type { Project } from "@/app/types";
+import { getProjectBedrooms, getProjectSpots } from "@/app/utils/projectFilters";
 
 export type SearchFilters = {
   city?: string;
@@ -21,31 +22,6 @@ type Props = {
 
 function toggleInArray<T>(arr: T[], value: T): T[] {
   return arr.includes(value) ? arr.filter((v) => v !== value) : [...arr, value];
-}
-
-function getProjectBedrooms(project: Project): number[] {
-  if (project.typologies.bedrooms && project.typologies.bedrooms.length > 0) {
-    return project.typologies.bedrooms;
-  }
-
-  const result: number[] = [];
-  if (project.typologies.studio) result.push(0);
-  if (project.typologies.oneBedroom) result.push(1);
-  if (project.typologies.twoBedroom) result.push(2);
-  if (project.typologies.threeBedroom) result.push(3);
-  return result;
-}
-
-function getProjectSpots(project: Project): number[] {
-  if (project.parking.spots && project.parking.spots.length > 0) {
-    return project.parking.spots;
-  }
-
-  const result: number[] = [];
-  if (project.parking.spots0) result.push(0);
-  if (project.parking.spots1) result.push(1);
-  if (project.parking.spots2) result.push(2);
-  return result;
 }
 
 export const defaultFilters: SearchFilters = {
