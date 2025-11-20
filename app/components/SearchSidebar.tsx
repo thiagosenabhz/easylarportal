@@ -130,8 +130,26 @@ const SearchSidebar: React.FC<Props> = ({ projects, value, onChange }) => {
     return Array.from(set);
   }, [filteredNeighborhoodsBase]);
 
+  const filtersAreActive = useMemo(() => {
+    return (
+      !!value.city ||
+      value.neighborhoods.length > 0 ||
+      value.bedrooms.length > 0 ||
+      value.spots.length > 0 ||
+      value.hasCoverage ||
+      value.hasPrivativa ||
+      value.hasAvulsa
+    );
+  }, [value]);
+
   const handleChange = (partial: Partial<SearchFilters>) => {
     onChange({ ...value, ...partial });
+  };
+
+  const handleClear = () => {
+    onChange({
+      ...defaultFilters
+    });
   };
 
   return (
@@ -317,6 +335,19 @@ const SearchSidebar: React.FC<Props> = ({ projects, value, onChange }) => {
           </label>
         </div>
       </div>
+
+      {/* Limpar filtros */}
+      {filtersAreActive && (
+        <div className="mt-auto border-t border-gray-200 pt-3">
+          <button
+            type="button"
+            onClick={handleClear}
+            className="text-xs font-medium text-gray-600 underline-offset-2 hover:text-gray-900 hover:underline"
+          >
+            Limpar filtros
+          </button>
+        </div>
+      )}
     </aside>
   );
 };
