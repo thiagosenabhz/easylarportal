@@ -79,7 +79,6 @@ const SearchSidebar: React.FC<Props> = ({ projects, value, onChange }) => {
   }, [filteredByCity]);
 
   const availableSpotsInfo = useMemo(() => {
-    a = 1
     const spotsSet = new Set<number>();
     let hasAvulsa = false;
 
