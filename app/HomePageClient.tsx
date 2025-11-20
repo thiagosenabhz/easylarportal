@@ -9,31 +9,7 @@ import SearchSidebar, {
 } from "@/app/components/SearchSidebar";
 import ProjectCard from "@/app/components/ProjectCard";
 import type { Project } from "@/app/types";
-
-function getProjectBedrooms(project: Project): number[] {
-  if (project.typologies.bedrooms && project.typologies.bedrooms.length > 0) {
-    return project.typologies.bedrooms;
-  }
-
-  const result: number[] = [];
-  if (project.typologies.studio) result.push(0);
-  if (project.typologies.oneBedroom) result.push(1);
-  if (project.typologies.twoBedroom) result.push(2);
-  if (project.typologies.threeBedroom) result.push(3);
-  return result;
-}
-
-function getProjectSpots(project: Project): number[] {
-  if (project.parking.spots && project.parking.spots.length > 0) {
-    return project.parking.spots;
-  }
-
-  const result: number[] = [];
-  if (project.parking.spots0) result.push(0);
-  if (project.parking.spots1) result.push(1);
-  if (project.parking.spots2) result.push(2);
-  return result;
-}
+import { getProjectBedrooms, getProjectSpots } from "@/app/utils/projectFilters";
 
 function hasActiveFilters(filters: SearchFilters): boolean {
   return (
