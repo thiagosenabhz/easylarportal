@@ -1,9 +1,8 @@
-// lib/supabaseClient.ts
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 // Lê as variáveis públicas do Next (definidas no Vercel ou no .env.local)
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL = https://zepngrslqqdtmvsraawg.supabase.co;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InplcG5ncnNscXFkdG12c3JhYXdnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAwMTU1NzEsImV4cCI6MjA3NTU5MTU3MX0.3lWBnHhYxAMqyPv_liMSyWKPXXKZh3gop4jQJjGHKrM;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error(
@@ -13,4 +12,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 // Client único e reutilizável na aplicação
-export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase: SupabaseClient = createClient(
+  supabaseUrl,
+  supabaseAnonKey
+);
