@@ -1,14 +1,16 @@
-\"use client\";
+# path: app/HomePageClient.tsx
+"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { projects as staticProjects } from "@/app/_data/projects";
 import SearchSidebar, {
   defaultFilters,
   type SearchFilters,
 } from "@/app/components/SearchSidebar";
 import ProjectCard from "@/app/components/ProjectCard";
 import type { Project } from "@/app/types";
-import { listProjectsFromSupabase } from "@/lib/projectsApi";
+import { supabase } from "@/lib/supabaseClient";
 
 function getProjectBedrooms(project: Project): number[] {
   if (project.typologies.bedrooms && project.typologies.bedrooms.length > 0) {
@@ -64,39 +66,80 @@ type InfoTab = "investor" | "education";
 export default function HomePageClient() {
   const [filters, setFilters] = useState<SearchFilters>(defaultFilters);
   const [infoTab, setInfoTab] = useState<InfoTab>("investor");
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [projects, setProjects] = useState<Project[]>(staticProjects);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const searchParams = useSearchParams();
   const view = searchParams.get("view");
 
   useEffect(() => {
-    let isMounted = true;
-
-    async function load() {
+    async function loadProjects() {
+      setIsLoading(true);
+      setError(null);
       try {
-        setIsLoading(true);
-        const data = await listProjectsFromSupabase();
-        if (isMounted) {
-          setProjects(data);
+        const { data, error } = await supabase
+          .from("projects")
+          .select("*")
+          .order("opening_date", { ascending: true });
+
+        if (error) {
+          console.error("Erro ao buscar projetos do Supabase:", error);
+          setError("Não foi possível carregar os empreendimentos. Tente novamente em instantes.");
+          setProjects(staticProjects);
+          return;
         }
-      } catch (error) {
-        console.error("[EasyLar] Erro ao carregar empreendimentos:", error);
-        if (isMounted) {
-          setProjects([]);
+
+        if (!data || data.length === 0) {
+          setProjects(staticProjects);
+          return;
         }
+
+        const normalized: Project[] = data.map((row) => ({
+          id: row.id,
+          slug: row.slug,
+          name: row.name,
+          city: row.city,
+          neighborhood: row.neighborhood,
+          state: row.state ?? "MG",
+          openingDate: row.opening_date ?? null,
+          deliveryDate: row.delivery_date ?? null,
+          priceFrom: row.price_from ?? null,
+          isLaunch: row.is_launch ?? false,
+          thumbUrl: row.thumb_url ?? "/emp/em-breve/thumb.jpg",
+          updatedFacadeUrl:
+            row.updated_facade_url ?? "/emp/em-breve/fachada_atual.jpg",
+          leisureItems: row.leisure_items ?? [],
+          typologies: {
+            bedrooms: row.typology_bedrooms ?? [],
+            coverage: row.typology_coverage ?? false,
+            privativa: row.typology_privativa ?? false,
+            studio: false,
+            oneBedroom: false,
+            twoBedroom: false,
+            threeBedroom: false,
+          },
+          parking: {
+            spots: row.parking_spots ?? [],
+            avulsa: row.parking_avulsa ?? false,
+            spots0: false,
+            spots1: false,
+            spots2: false,
+          },
+          showFacadeComparison: row.show_facade_comparison ?? false,
+        }));
+
+        setProjects(normalized);
+      } catch (err) {
+        console.error("Erro inesperado ao carregar projetos:", err);
+        setError("Ocorreu um erro inesperado. Tente novamente mais tarde.");
+        setProjects(staticProjects);
       } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
+        setIsLoading(false);
       }
     }
 
-    load();
-
-    return () => {
-      isMounted = false;
-    };
+    loadProjects();
   }, []);
 
   const filteredProjects = useMemo(() => {
@@ -150,9 +193,7 @@ export default function HomePageClient() {
   }, [filters, view, projects]);
 
   const totalLabel =
-    isLoading
-      ? "Carregando empreendimentos..."
-      : filteredProjects.length === 0
+    filteredProjects.length === 0
       ? "Nenhum empreendimento encontrado"
       : filteredProjects.length === 1
       ? "1 empreendimento encontrado"
@@ -236,7 +277,7 @@ export default function HomePageClient() {
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-xs font-medium text-slate-700 sm:text-sm">
                 {totalLabel}
-                {!isLoading && filtersAreActive && filteredProjects.length > 0
+                {filtersAreActive && filteredProjects.length > 0
                   ? " · filtros aplicados"
                   : ""}
               </p>
@@ -253,12 +294,18 @@ export default function HomePageClient() {
             </div>
 
             {isLoading && (
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+              <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
                 Carregando empreendimentos...
               </div>
             )}
 
-            {!isLoading && filteredProjects.length === 0 && (
+            {error && !isLoading && (
+              <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+                {error}
+              </div>
+            )}
+
+            {!isLoading && !error && filteredProjects.length === 0 && (
               <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
                 Nenhum empreendimento encontrado com os filtros selecionados.
                 Tente remover alguns filtros ou ampliar a faixa de localização.
@@ -266,6 +313,7 @@ export default function HomePageClient() {
             )}
 
             {!isLoading &&
+              !error &&
               filteredProjects.map((project) => (
                 <ProjectCard key={project.id} project={project} />
               ))}
@@ -406,7 +454,7 @@ export default function HomePageClient() {
                     observar no contrato.
                   </p>
                 </article>
-                <article className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-800">
+                <article className="rounded-2xl border border-slate-200 bg-slate-200 bg-slate-50 p-4 text-sm text-slate-800">
                   <h3 className="text-sm font-semibold text-slate-900">
                     Comprar para investir em BH
                   </h3>
