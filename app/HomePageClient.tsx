@@ -67,7 +67,7 @@ function mapRowToProject(row: any): Project {
     priceFrom: Number(row.price_from ?? 0),
     isLaunch: !!row.is_launch,
     thumb: row.thumb_url,
-    updatedFacadeUrl: row.updated_facade_url ?? undefined,
+    updatedFacade: row.updated_facade_url ?? undefined,
     leisure: Array.isArray(row.leisure_items) ? row.leisure_items : [],
     typologies: {
       bedrooms: Array.isArray(row.typology_bedrooms)
