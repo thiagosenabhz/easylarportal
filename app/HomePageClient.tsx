@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { projects as staticProjects } from "@/app/_data/projects";
 import SearchSidebar, {
   defaultFilters,
   type SearchFilters,
@@ -11,30 +10,7 @@ import ProjectCard from "@/app/components/ProjectCard";
 import type { Project } from "@/app/types";
 import { supabase } from "@/lib/supabaseClient";
 
-function getProjectBedrooms(project: Project): number[] {
-  if (project.typologies.bedrooms && project.typologies.bedrooms.length > 0) {
-    return project.typologies.bedrooms;
-  }
-
-  const result: number[] = [];
-  if (project.typologies.studio) result.push(0);
-  if (project.typologies.oneBedroom) result.push(1);
-  if (project.typologies.twoBedroom) result.push(2);
-  if (project.typologies.threeBedroom) result.push(3);
-  return result;
-}
-
-function getProjectSpots(project: Project): number[] {
-  if (project.parking.spots && project.parking.spots.length > 0) {
-    return project.parking.spots;
-  }
-
-  const result: number[] = [];
-  if (project.parking.spots0) result.push(0);
-  if (project.parking.spots1) result.push(1);
-  if (project.parking.spots2) result.push(2);
-  return result;
-}
+type InfoTab = "investor" | "education";
 
 function hasActiveFilters(filters: SearchFilters): boolean {
   return (
@@ -48,105 +24,117 @@ function hasActiveFilters(filters: SearchFilters): boolean {
   );
 }
 
+function getProjectBedrooms(project: Project): number[] {
+  if (project.typologies?.bedrooms && project.typologies.bedrooms.length > 0) {
+    return project.typologies.bedrooms;
+  }
+
+  const result: number[] = [];
+  if (project.typologies?.studio) result.push(0);
+  if (project.typologies?.oneBedroom) result.push(1);
+  if (project.typologies?.twoBedroom) result.push(2);
+  if (project.typologies?.threeBedroom) result.push(3);
+  return result;
+}
+
+function getProjectSpots(project: Project): number[] {
+  if (project.parking?.spots && project.parking.spots.length > 0) {
+    return project.parking.spots;
+  }
+  return [];
+}
+
 function openGlobalWhatsModal() {
-  // Fecha qualquer modal que esteja aberto
   const ev = new KeyboardEvent("keydown", { key: "Escape" });
   document.dispatchEvent(ev);
 
-  // Clica no botão global de WhatsApp (mesmo fluxo do FloatingWhatsApp)
   const openBtn = document.querySelector<HTMLButtonElement>(
     'button[aria-label="WhatsApp"]'
   );
   openBtn?.click();
 }
 
-type InfoTab = "investor" | "education";
+function mapRowToProject(row: any): Project {
+  return {
+    id: row.id,
+    slug: row.slug,
+    name: row.name,
+    city: row.city,
+    neighborhood: row.neighborhood,
+    state: row.state,
+    openingDate: row.opening_date,
+    deliveryDate: row.delivery_date,
+    priceFrom: Number(row.price_from ?? 0),
+    isLaunch: !!row.is_launch,
+    thumb: row.thumb_url,
+    updatedFacadeUrl: row.updated_facade_url ?? undefined,
+    leisure: Array.isArray(row.leisure_items) ? row.leisure_items : [],
+    typologies: {
+      bedrooms: Array.isArray(row.typology_bedrooms)
+        ? row.typology_bedrooms
+        : [],
+      coverage: !!row.typology_coverage,
+      privativa: !!row.typology_privativa,
+      studio: false,
+      oneBedroom: false,
+      twoBedroom: false,
+      threeBedroom: false,
+    },
+    parking: {
+      spots: Array.isArray(row.parking_spots) ? row.parking_spots : [],
+      avulsa: !!row.parking_avulsa,
+    },
+    showFacadeComparison: !!row.show_facade_comparison,
+  };
+}
 
 export default function HomePageClient() {
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<SearchFilters>(defaultFilters);
   const [infoTab, setInfoTab] = useState<InfoTab>("investor");
-  const [projects, setProjects] = useState<Project[]>(staticProjects);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const searchParams = useSearchParams();
   const view = searchParams.get("view");
 
   useEffect(() => {
-    async function loadProjects() {
-      setIsLoading(true);
+    let active = true;
+
+    async function fetchProjects() {
+      setLoading(true);
       setError(null);
-      try {
-        const { data, error } = await supabase
-          .from("projects")
-          .select("*")
-          .order("opening_date", { ascending: true });
 
-        if (error) {
-          console.error("Erro ao buscar projetos do Supabase:", error);
-          setError("Não foi possível carregar os empreendimentos. Tente novamente em instantes.");
-          setProjects(staticProjects);
-          return;
-        }
+      const { data, error } = await supabase
+        .from("projects")
+        .select("*")
+        .order("name", { ascending: true });
 
-        if (!data || data.length === 0) {
-          setProjects(staticProjects);
-          return;
-        }
+      if (!active) return;
 
-        const normalized: Project[] = data.map((row) => ({
-          id: row.id,
-          slug: row.slug,
-          name: row.name,
-          city: row.city,
-          neighborhood: row.neighborhood,
-          state: row.state ?? "MG",
-          openingDate: row.opening_date ?? null,
-          deliveryDate: row.delivery_date ?? null,
-          priceFrom: row.price_from ?? null,
-          isLaunch: row.is_launch ?? false,
-          thumbUrl: row.thumb_url ?? "/emp/em-breve/thumb.jpg",
-          updatedFacadeUrl:
-            row.updated_facade_url ?? "/emp/em-breve/fachada_atual.jpg",
-          leisureItems: row.leisure_items ?? [],
-          typologies: {
-            bedrooms: row.typology_bedrooms ?? [],
-            coverage: row.typology_coverage ?? false,
-            privativa: row.typology_privativa ?? false,
-            studio: false,
-            oneBedroom: false,
-            twoBedroom: false,
-            threeBedroom: false,
-          },
-          parking: {
-            spots: row.parking_spots ?? [],
-            avulsa: row.parking_avulsa ?? false,
-            spots0: false,
-            spots1: false,
-            spots2: false,
-          },
-          showFacadeComparison: row.show_facade_comparison ?? false,
-        }));
-
+      if (error) {
+        console.error("Erro ao carregar projetos do Supabase:", error);
+        setError("Não foi possível carregar os empreendimentos.");
+        setProjects([]);
+      } else if (data) {
+        const normalized: Project[] = data.map((row: any) => mapRowToProject(row));
         setProjects(normalized);
-      } catch (err) {
-        console.error("Erro inesperado ao carregar projetos:", err);
-        setError("Ocorreu um erro inesperado. Tente novamente mais tarde.");
-        setProjects(staticProjects);
-      } finally {
-        setIsLoading(false);
       }
+
+      setLoading(false);
     }
 
-    loadProjects();
+    fetchProjects();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const filteredProjects = useMemo(() => {
     let list = projects.filter((p) => {
-      // Cidade
       if (filters.city && p.city !== filters.city) return false;
 
-      // Bairro
       if (
         filters.neighborhoods.length > 0 &&
         !filters.neighborhoods.includes(p.neighborhood)
@@ -157,7 +145,6 @@ export default function HomePageClient() {
       const projectBedrooms = getProjectBedrooms(p);
       const projectSpots = getProjectSpots(p);
 
-      // Tipologias (quartos)
       if (filters.bedrooms.length > 0) {
         const matchesBedrooms = filters.bedrooms.some((n) =>
           projectBedrooms.includes(n)
@@ -165,15 +152,11 @@ export default function HomePageClient() {
         if (!matchesBedrooms) return false;
       }
 
-      // Vagas
       if (filters.spots.length > 0) {
-        const matchesSpots = filters.spots.some((s) =>
-          projectSpots.includes(s)
-        );
+        const matchesSpots = filters.spots.some((s) => projectSpots.includes(s));
         if (!matchesSpots) return false;
       }
 
-      // Diferenciais
       if (filters.hasCoverage && !p.typologies.coverage) return false;
       if (filters.hasPrivativa && !p.typologies.privativa) return false;
       if (filters.hasAvulsa && !p.parking.avulsa) return false;
@@ -181,7 +164,6 @@ export default function HomePageClient() {
       return true;
     });
 
-    // Filtro global de visão (Pré-abertura / Oportunidades)
     if (view === "launch") {
       list = list.filter((p) => p.isLaunch);
     } else if (view === "stock") {
@@ -189,14 +171,14 @@ export default function HomePageClient() {
     }
 
     return list;
-  }, [filters, view, projects]);
+  }, [projects, filters, view]);
 
-  const totalLabel =
-    filteredProjects.length === 0
-      ? "Nenhum empreendimento encontrado"
-      : filteredProjects.length === 1
-      ? "1 empreendimento encontrado"
-      : `${filteredProjects.length} empreendimentos encontrados`;
+  const totalLabel = (() => {
+    if (loading) return "Carregando empreendimentos...";
+    if (filteredProjects.length === 0) return "Nenhum empreendimento encontrado";
+    if (filteredProjects.length === 1) return "1 empreendimento encontrado";
+    return `${filteredProjects.length} empreendimentos encontrados`;
+  })();
 
   const filtersAreActive = hasActiveFilters(filters);
 
@@ -276,7 +258,7 @@ export default function HomePageClient() {
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-xs font-medium text-slate-700 sm:text-sm">
                 {totalLabel}
-                {filtersAreActive && filteredProjects.length > 0
+                {!loading && filtersAreActive && filteredProjects.length > 0
                   ? " · filtros aplicados"
                   : ""}
               </p>
@@ -292,27 +274,26 @@ export default function HomePageClient() {
               )}
             </div>
 
-            {isLoading && (
-              <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-                Carregando empreendimentos...
-              </div>
-            )}
-
-            {error && !isLoading && (
-              <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+            {error && (
+              <div className="rounded-xl border border-red-100 bg-red-50 p-3 text-xs text-red-700 sm:text-sm">
                 {error}
               </div>
             )}
 
-            {!isLoading && !error && filteredProjects.length === 0 && (
+            {!loading && filteredProjects.length === 0 && !error && (
               <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
                 Nenhum empreendimento encontrado com os filtros selecionados.
                 Tente remover alguns filtros ou ampliar a faixa de localização.
               </div>
             )}
 
-            {!isLoading &&
-              !error &&
+            {loading && (
+              <div className="space-y-3 text-xs text-slate-500 sm:text-sm">
+                <p>Carregando lista de empreendimentos...</p>
+              </div>
+            )}
+
+            {!loading &&
               filteredProjects.map((project) => (
                 <ProjectCard key={project.id} project={project} />
               ))}
@@ -453,7 +434,7 @@ export default function HomePageClient() {
                     observar no contrato.
                   </p>
                 </article>
-                <article className="rounded-2xl border border-slate-200 bg-slate-200 bg-slate-50 p-4 text-sm text-slate-800">
+                <article className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-800">
                   <h3 className="text-sm font-semibold text-slate-900">
                     Comprar para investir em BH
                   </h3>
