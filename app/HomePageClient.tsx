@@ -1,8 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { projects } from "@/app/_data/projects";
 import SearchSidebar, {
   defaultFilters,
   type SearchFilters,
@@ -40,8 +39,48 @@ type InfoTab = "investor" | "education";
 export default function HomePageClient() {
   const [filters, setFilters] = useState<SearchFilters>(defaultFilters);
   const [infoTab, setInfoTab] = useState<InfoTab>("investor");
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
   const searchParams = useSearchParams();
   const view = searchParams.get("view");
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadProjects() {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const res = await fetch("/api/projects");
+        if (!res.ok) {
+          throw new Error(`Erro ao carregar projetos: ${res.status}`);
+        }
+
+        const data = (await res.json()) as Project[];
+
+        if (isMounted) {
+          setProjects(data);
+        }
+      } catch (err) {
+        if (isMounted) {
+          setError("Não foi possível carregar os empreendimentos no momento.");
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadProjects();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const filteredProjects = useMemo(() => {
     let list = projects.filter((p) => {
@@ -91,16 +130,22 @@ export default function HomePageClient() {
     }
 
     return list;
-  }, [filters, view]);
-
-  const totalLabel =
-    filteredProjects.length === 0
-      ? "Nenhum empreendimento encontrado"
-      : filteredProjects.length === 1
-      ? "1 empreendimento encontrado"
-      : `${filteredProjects.length} empreendimentos encontrados`;
+  }, [projects, filters, view]);
 
   const filtersAreActive = hasActiveFilters(filters);
+
+  let totalLabel: string;
+  if (loading) {
+    totalLabel = "Carregando empreendimentos...";
+  } else if (error) {
+    totalLabel = "Não foi possível carregar os empreendimentos";
+  } else if (filteredProjects.length === 0) {
+    totalLabel = "Nenhum empreendimento encontrado";
+  } else if (filteredProjects.length === 1) {
+    totalLabel = "1 empreendimento encontrado";
+  } else {
+    totalLabel = `${filteredProjects.length} empreendimentos encontrados`;
+  }
 
   return (
     <main className="min-h-screen bg-slate-50">
@@ -178,7 +223,10 @@ export default function HomePageClient() {
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-xs font-medium text-slate-700 sm:text-sm">
                 {totalLabel}
-                {filtersAreActive && filteredProjects.length > 0
+                {!loading &&
+                  !error &&
+                  filtersAreActive &&
+                  filteredProjects.length > 0
                   ? " · filtros aplicados"
                   : ""}
               </p>
@@ -194,16 +242,30 @@ export default function HomePageClient() {
               )}
             </div>
 
-            {filteredProjects.length === 0 && (
+            {error && (
+              <div className="rounded-xl border border-rose-100 bg-rose-50 p-4 text-sm text-rose-700">
+                {error}
+              </div>
+            )}
+
+            {loading && !error && (
+              <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+                Carregando empreendimentos...
+              </div>
+            )}
+
+            {!loading && !error && filteredProjects.length === 0 && (
               <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
                 Nenhum empreendimento encontrado com os filtros selecionados.
                 Tente remover alguns filtros ou ampliar a faixa de localização.
               </div>
             )}
 
-            {filteredProjects.map((project) => (
-              <ProjectCard key={project.id} project={project} />
-            ))}
+            {!loading &&
+              !error &&
+              filteredProjects.map((project) => (
+                <ProjectCard key={project.id} project={project} />
+              ))}
           </section>
 
           {/* Slot de mapa / futuro */}
