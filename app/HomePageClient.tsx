@@ -1,4 +1,4 @@
-"use client";
+\"use client\";
 
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
@@ -8,7 +8,32 @@ import SearchSidebar, {
 } from "@/app/components/SearchSidebar";
 import ProjectCard from "@/app/components/ProjectCard";
 import type { Project } from "@/app/types";
-import { getProjectBedrooms, getProjectSpots } from "@/app/utils/projectFilters";
+import { listProjectsFromSupabase } from "@/lib/projectsApi";
+
+function getProjectBedrooms(project: Project): number[] {
+  if (project.typologies.bedrooms && project.typologies.bedrooms.length > 0) {
+    return project.typologies.bedrooms;
+  }
+
+  const result: number[] = [];
+  if (project.typologies.studio) result.push(0);
+  if (project.typologies.oneBedroom) result.push(1);
+  if (project.typologies.twoBedroom) result.push(2);
+  if (project.typologies.threeBedroom) result.push(3);
+  return result;
+}
+
+function getProjectSpots(project: Project): number[] {
+  if (project.parking.spots && project.parking.spots.length > 0) {
+    return project.parking.spots;
+  }
+
+  const result: number[] = [];
+  if (project.parking.spots0) result.push(0);
+  if (project.parking.spots1) result.push(1);
+  if (project.parking.spots2) result.push(2);
+  return result;
+}
 
 function hasActiveFilters(filters: SearchFilters): boolean {
   return (
@@ -40,8 +65,7 @@ export default function HomePageClient() {
   const [filters, setFilters] = useState<SearchFilters>(defaultFilters);
   const [infoTab, setInfoTab] = useState<InfoTab>("investor");
   const [projects, setProjects] = useState<Project[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const searchParams = useSearchParams();
   const view = searchParams.get("view");
@@ -49,33 +73,26 @@ export default function HomePageClient() {
   useEffect(() => {
     let isMounted = true;
 
-    async function loadProjects() {
+    async function load() {
       try {
-        setLoading(true);
-        setError(null);
-
-        const res = await fetch("/api/projects");
-        if (!res.ok) {
-          throw new Error(`Erro ao carregar projetos: ${res.status}`);
-        }
-
-        const data = (await res.json()) as Project[];
-
+        setIsLoading(true);
+        const data = await listProjectsFromSupabase();
         if (isMounted) {
           setProjects(data);
         }
-      } catch (err) {
+      } catch (error) {
+        console.error("[EasyLar] Erro ao carregar empreendimentos:", error);
         if (isMounted) {
-          setError("Não foi possível carregar os empreendimentos no momento.");
+          setProjects([]);
         }
       } finally {
         if (isMounted) {
-          setLoading(false);
+          setIsLoading(false);
         }
       }
     }
 
-    loadProjects();
+    load();
 
     return () => {
       isMounted = false;
@@ -130,22 +147,18 @@ export default function HomePageClient() {
     }
 
     return list;
-  }, [projects, filters, view]);
+  }, [filters, view, projects]);
+
+  const totalLabel =
+    isLoading
+      ? "Carregando empreendimentos..."
+      : filteredProjects.length === 0
+      ? "Nenhum empreendimento encontrado"
+      : filteredProjects.length === 1
+      ? "1 empreendimento encontrado"
+      : `${filteredProjects.length} empreendimentos encontrados`;
 
   const filtersAreActive = hasActiveFilters(filters);
-
-  let totalLabel: string;
-  if (loading) {
-    totalLabel = "Carregando empreendimentos...";
-  } else if (error) {
-    totalLabel = "Não foi possível carregar os empreendimentos";
-  } else if (filteredProjects.length === 0) {
-    totalLabel = "Nenhum empreendimento encontrado";
-  } else if (filteredProjects.length === 1) {
-    totalLabel = "1 empreendimento encontrado";
-  } else {
-    totalLabel = `${filteredProjects.length} empreendimentos encontrados`;
-  }
 
   return (
     <main className="min-h-screen bg-slate-50">
@@ -223,10 +236,7 @@ export default function HomePageClient() {
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-xs font-medium text-slate-700 sm:text-sm">
                 {totalLabel}
-                {!loading &&
-                  !error &&
-                  filtersAreActive &&
-                  filteredProjects.length > 0
+                {!isLoading && filtersAreActive && filteredProjects.length > 0
                   ? " · filtros aplicados"
                   : ""}
               </p>
@@ -242,27 +252,20 @@ export default function HomePageClient() {
               )}
             </div>
 
-            {error && (
-              <div className="rounded-xl border border-rose-100 bg-rose-50 p-4 text-sm text-rose-700">
-                {error}
-              </div>
-            )}
-
-            {loading && !error && (
-              <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+            {isLoading && (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
                 Carregando empreendimentos...
               </div>
             )}
 
-            {!loading && !error && filteredProjects.length === 0 && (
+            {!isLoading && filteredProjects.length === 0 && (
               <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
                 Nenhum empreendimento encontrado com os filtros selecionados.
                 Tente remover alguns filtros ou ampliar a faixa de localização.
               </div>
             )}
 
-            {!loading &&
-              !error &&
+            {!isLoading &&
               filteredProjects.map((project) => (
                 <ProjectCard key={project.id} project={project} />
               ))}
