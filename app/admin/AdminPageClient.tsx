@@ -1,3 +1,5 @@
+// path: app/admin/AdminPageClient.tsx
+
 "use client";
 
 import { useState } from "react";
