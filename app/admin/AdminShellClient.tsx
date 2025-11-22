@@ -10,23 +10,25 @@ export default function AdminShellClient() {
   const [activeTab, setActiveTab] = useState<Tab>("project");
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6 lg:px-6">
-      <h1 className="text-2xl font-semibold text-gray-900">
+    <main className="mx-auto max-w-7xl px-4 py-8 lg:px-6">
+      <h1 className="text-2xl font-semibold text-slate-900">
         Painel do Administrador
       </h1>
-
-      <p className="mt-2 text-sm text-gray-600">
-        Área interna para criar novos empreendimentos, acompanhar leads e ver relatórios.
+      <p className="mt-2 max-w-2xl text-sm text-slate-600">
+        Área interna para cadastrar novos empreendimentos, acompanhar leads
+        e visualizar relatórios. Versão de teste, focada em manter o deploy
+        estável enquanto evoluímos as ferramentas de administração.
       </p>
 
-      <div className="mt-6 flex gap-3">
+      {/* Abas */}
+      <div className="mt-6 flex flex-wrap gap-3">
         <button
           type="button"
           onClick={() => setActiveTab("project")}
           className={`rounded-full px-4 py-2 text-sm font-medium transition ${
             activeTab === "project"
               ? "bg-blue-600 text-white shadow-sm"
-              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              : "bg-slate-100 text-slate-700 hover:bg-slate-200"
           }`}
         >
           Novo Empreendimento
@@ -38,7 +40,7 @@ export default function AdminShellClient() {
           className={`rounded-full px-4 py-2 text-sm font-medium transition ${
             activeTab === "crm"
               ? "bg-blue-600 text-white shadow-sm"
-              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              : "bg-slate-100 text-slate-700 hover:bg-slate-200"
           }`}
         >
           CRM
@@ -50,29 +52,41 @@ export default function AdminShellClient() {
           className={`rounded-full px-4 py-2 text-sm font-medium transition ${
             activeTab === "reports"
               ? "bg-blue-600 text-white shadow-sm"
-              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              : "bg-slate-100 text-slate-700 hover:bg-slate-200"
           }`}
         >
           Relatórios
         </button>
       </div>
 
-      <div className="mt-8">
-        {activeTab === "project" && <NewProjectForm />}
+      {/* Conteúdo da aba ativa */}
+      <div className="mt-8 space-y-6">
+        {activeTab === "project" && (
+          <section className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm lg:p-6">
+            <NewProjectForm />
+          </section>
+        )}
 
-        {activeTab === "crm" && <CRMBoard />}
+        {activeTab === "crm" && (
+          <section className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm lg:p-6">
+            <CRMBoard />
+          </section>
+        )}
 
         {activeTab === "reports" && (
-          <section className="rounded-2xl bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-gray-900">
-              Relatórios
+          <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
+            <h2 className="text-lg font-semibold text-slate-900">
+              Relatórios do EasyLar
             </h2>
-            <p className="mt-2 text-sm text-gray-600">
-              Em breve entram aqui os dashboards de vendas, leads e campanhas.
+            <p className="mt-2 max-w-xl text-sm text-slate-600">
+              Em breve você poderá visualizar gráficos e indicadores dos leads,
+              desempenho dos empreendimentos e funil de vendas aqui dentro do
+              painel. Nesta etapa, estamos garantindo apenas que a página
+              administrativa esteja estável em produção.
             </p>
           </section>
         )}
       </div>
-    </div>
+    </main>
   );
 }
