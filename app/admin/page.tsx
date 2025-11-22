@@ -1,8 +1,9 @@
-import dynamic from "next/dynamic";
+import dynamicImport from "next/dynamic";
 
+// Força esta rota a rodar só no lado do servidor em runtime (sem prerender estático)
 export const dynamic = "force-dynamic";
 
-const AdminPageClient = dynamic(() => import("./AdminPageClient"), {
+const AdminPageClient = dynamicImport(() => import("./AdminPageClient"), {
   ssr: false,
 });
 
